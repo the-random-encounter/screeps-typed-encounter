@@ -1,5 +1,5 @@
 # npm lock file (v5.0.0+)
-./package-lock.json
+package-lock.json
 
 # Ignore basic folders
 /node_modules
@@ -27,7 +27,7 @@ screeps.json
 *~
 
 # Editor folders
-./.vscode/
+/.vscode
 .eslintrc.js
 .editorconfig
 .prettierrc
