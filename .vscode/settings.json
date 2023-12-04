@@ -1,46 +1,46 @@
 {
-    "[javascript]": {
-        "editor.formatOnSave": false
-    },
-    "[json]": {
-        "editor.formatOnSave": true
-    },
-    "[typescript]": {
-        "editor.formatOnSave": false
-    },
-    "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true
-    },
-    "editor.formatOnSave": true,
-    "editor.renderWhitespace": "boundary",
-    "files.encoding": "utf8",
-    "files.insertFinalNewline": true,
-    "files.trimTrailingWhitespace": true,
-    "search.exclude": {
-        "_book/**": true,
-        ".rpt2_cache/**": true,
-        "dist/**": true,
-        "node_modules/**": true,
-        "typings/**": true
-    },
-    "typescript.tsdk": "./node_modules/typescript/lib",
-		"eslint.enable": true,
-		"MicroPython.executeButton": [
-			{
-				"text": "▶",
-				"tooltip": "Run",
-				"alignment": "left",
-				"command": "extension.executeFile",
-				"priority": 3.5
-			}
-		],
-		"MicroPython.syncButton": [
-			{
-				"text": "$(sync)",
-				"tooltip": "sync",
-				"alignment": "left",
-				"command": "extension.execute",
-				"priority": 4
-			}
-		]
+  "[javascript]": {
+    "editor.formatOnSave": false
+  },
+  "[json]": {
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.formatOnSave": false
+  },
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "editor.formatOnSave": true,
+  "editor.renderWhitespace": "none",
+  "files.encoding": "utf8",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "search.exclude": {
+    "_book/**": true,
+    ".rpt2_cache/**": true,
+    "dist/**": true,
+    "node_modules/**": true,
+    "typings/**": true
+  },
+  "typescript.tsdk": "./node_modules/typescript/lib",
+  "eslint.enable": true,
+  "MicroPython.executeButton": [
+		{
+			"text": "▶",
+			"tooltip": "Run",
+			"alignment": "left",
+			"command": "extension.executeFile",
+			"priority": 3.5
+		}
+	],
+  "MicroPython.syncButton": [
+		{
+			"text": "$(sync)",
+			"tooltip": "sync",
+			"alignment": "left",
+			"command": "extension.execute",
+			"priority": 4
+		}
+	]
 }
