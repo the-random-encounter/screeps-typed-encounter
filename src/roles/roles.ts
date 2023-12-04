@@ -3,7 +3,6 @@ export const roleBuilder = {
   /** @param {Creep} creep **/
 	run: function (creep: Creep) {
 
-		try {
 			const room: Room = creep.room;
 			const cMem: CreepMemory = creep.memory;
 			const rMem: RoomMemory = room.memory;
@@ -177,9 +176,6 @@ export const roleBuilder = {
 					console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
 				creep.say('💤');
 			}
-		} catch (e: any) {
-			console.log(e.stack);
-		}
 	}
 };
 export const roleClaimer = {
@@ -436,7 +432,7 @@ export const roleCollector = {
 
 								if (outboxes.length > 0) {
 									outboxes = outboxes.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY]);
-									if (outboxes[0].store[RESOURCE_ENERGY] < creep.store.getCapacity()) {
+									if (outboxes[0].store[RESOURCE_ENERGY] > creep.store.getCapacity()) {
 										if (creep.withdraw(outboxes[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
 											creep.moveTo(outboxes[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 									} else {
