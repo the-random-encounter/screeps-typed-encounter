@@ -40,6 +40,6 @@ RoomPosition.prototype.getNumOpenPositions = function (): number {
 	return freePos.length;
 }
 
-RoomPosition.prototype.link = function () {
-    return `<a href="#!/room/${Game.shard.name}/${this.roomName}">[${this.roomName} ${this.x},${this.y}]</a>`;
+RoomPosition.prototype.link = function (): string {
+    return `[<a href="#!/room/${Game.shard.name}/${this.roomName}">${this.roomName}${this.x},${this.y}</a>]:`;
 };
