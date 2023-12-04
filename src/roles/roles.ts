@@ -1,86 +1,98 @@
 export const roleBuilder = {
 
   /** @param {Creep} creep **/
-  run: function(creep: Creep) {
+	run: function (creep: Creep) {
 
-    const room:	Room					= creep.room;
-    const cMem:	CreepMemory		= creep.memory;
-    const rMem:	RoomMemory		= room.memory;
-    const pos:	RoomPosition	= creep.pos;
+		try {
+			const room: Room = creep.room;
+			const cMem: CreepMemory = creep.memory;
+			const rMem: RoomMemory = room.memory;
+			const pos: RoomPosition = creep.pos;
 
-    if (cMem.disableAI === undefined)		cMem.disableAI = false;
-    if (cMem.rallyPoint === undefined)	cMem.rallyPoint = 'none';
+			if (cMem.disableAI === undefined) cMem.disableAI = false;
+			if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
 
-    if (!cMem.disableAI) {
+			if (!cMem.disableAI) {
 
-      if (cMem.rallyPoint === 'none') {
-        if (creep.ticksToLive <= 2) {
-          creep.drop(RESOURCE_ENERGY);
-          creep.say('☠️');
-        }
+				if (cMem.rallyPoint === 'none') {
+					if (creep.ticksToLive <= 2) {
+						creep.drop(RESOURCE_ENERGY);
+						creep.say('☠️');
+					}
 
-        if (cMem.working && creep.store[RESOURCE_ENERGY] == 0) {
-          cMem.working = false;
-          creep.say('🔼');
-        }
-        if (!cMem.working && creep.store.getFreeCapacity() == 0) {
-          cMem.working = true;
-          creep.say('🏗️');
-        }
+					if (cMem.working && creep.store[RESOURCE_ENERGY] == 0) {
+						cMem.working = false;
+						creep.say('🔼');
+					}
+					if (!cMem.working && creep.store.getFreeCapacity() == 0) {
+						cMem.working = true;
+						creep.say('🏗️');
+					}
 
-        if (creep.pos.x == 49)			creep.move(LEFT);
-				else if (creep.pos.x == 0)	creep.move(RIGHT);
-				else if (creep.pos.y == 49)	creep.move(TOP);
-				else if (creep.pos.y == 0)	creep.move(BOTTOM);
+					if (creep.pos.x == 49) creep.move(LEFT);
+					else if (creep.pos.x == 0) creep.move(RIGHT);
+					else if (creep.pos.y == 49) creep.move(TOP);
+					else if (creep.pos.y == 0) creep.move(BOTTOM);
 
-				let cSites = room.find(FIND_MY_CONSTRUCTION_SITES);
-        if (rMem.settings.flags.sortConSites)
-					cSites = cSites.sort((a, b) => b.progress - a.progress);
+					let cSites = room.find(FIND_MY_CONSTRUCTION_SITES);
+					if (rMem.settings.flags.sortConSites)
+						cSites = cSites.sort((a, b) => b.progress - a.progress);
 
-        if (creep.store.getUsedCapacity() == 0) {
+					if (creep.store.getUsedCapacity() == 0) {
 
-					switch (Memory.rooms[cMem.homeRoom].settings.flags.centralStorageLogic) {
-						case true: {
+						switch (Memory.rooms[cMem.homeRoom].settings.flags.centralStorageLogic) {
+							case true: {
 
-							const droppedPiles: Array<Resource | Structure> = room.find(FIND_DROPPED_RESOURCES);
-							const containersWithEnergy: Array<Structure> = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_STORAGE || i.structureType == STRUCTURE_CONTAINER) && i.store[RESOURCE_ENERGY] > 0) });
-							const targets: Array<Resource | Structure> = droppedPiles.concat(containersWithEnergy);
-							let target: any = pos.findClosestByRange(targets);
+								const droppedPiles: Array<Resource | Structure> = room.find(FIND_DROPPED_RESOURCES);
+								const containersWithEnergy: Array<Structure> = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_STORAGE || i.structureType == STRUCTURE_CONTAINER) && i.store[RESOURCE_ENERGY] > 0) });
+								const targets: Array<Resource | Structure> = droppedPiles.concat(containersWithEnergy);
+								let target: any = pos.findClosestByRange(targets);
 
-							if (target) {
-								if (creep.pickup(target) == ERR_NOT_IN_RANGE || creep.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-									creep.moveTo(target, { visualizePathStyle: { stroke: '#0000ff', opacity: 0.3, lineStyle: 'dotted' } });
-								else creep.withdraw(target, RESOURCE_ENERGY);
-							}
-							break;
-						}
-
-						default:
-						case false: {
-
-							let outboxes: Array<StructureContainer> = [];
-
-							if (rMem.settings.containerSettings.outboxes.length > 0) {
-								let outboxIDs = rMem.settings.containerSettings.outboxes;
-								for (let i = 0; i < outboxIDs.length; i++) {
-									const outbox = Game.getObjectById(outboxIDs[i]);
-									outboxes.push(outbox);
+								if (target) {
+									if (creep.pickup(target) == ERR_NOT_IN_RANGE || creep.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
+										creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#0000ff', opacity: 0.3, lineStyle: 'dotted' } });
+									else creep.withdraw(target, RESOURCE_ENERGY);
 								}
-							} else {
-								const sources: Array<Source> = room.find(FIND_SOURCES);
-								for (let i = 0; i < sources.length; i++) {
-									const outbox: Array<StructureContainer> = sources[i].pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
-									if (outbox.length > 0) outboxes.push(outbox[0]);
-								}
+								break;
 							}
 
-							if (outboxes.length > 0) {
-								outboxes = outboxes.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY]);
+							default:
+							case false: {
 
-								const closestBox = cSites[0].pos.findClosestByRange(outboxes);
-								if (closestBox.store[RESOURCE_ENERGY] > 0) {
-									if (creep.withdraw(closestBox, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-										creep.moveTo(closestBox, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' } });
+								let outboxes: Array<StructureContainer> = [];
+
+								if (rMem.settings.containerSettings.outboxes.length > 0) {
+									let outboxIDs = rMem.settings.containerSettings.outboxes;
+									for (let i = 0; i < outboxIDs.length; i++) {
+										const outbox = Game.getObjectById(outboxIDs[i]);
+										outboxes.push(outbox);
+									}
+								} else {
+									const sources: Array<Source> = room.find(FIND_SOURCES);
+									for (let i = 0; i < sources.length; i++) {
+										const outbox: Array<StructureContainer> = sources[i].pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
+										if (outbox.length > 0) outboxes.push(outbox[0]);
+									}
+								}
+
+								if (outboxes.length > 0) {
+									outboxes = outboxes.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY]);
+
+									const closestBox = cSites[0].pos.findClosestByRange(outboxes);
+									if (closestBox.store[RESOURCE_ENERGY] > 0) {
+										if (creep.withdraw(closestBox, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
+											creep.moveTo(closestBox, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' } });
+									} else {
+										let droppedPiles = room.find(FIND_DROPPED_RESOURCES);
+										if (droppedPiles.length > 0) {
+											const target = pos.findClosestByRange(droppedPiles);
+
+											if (target) {
+												if (creep.pickup(target) == ERR_NOT_IN_RANGE)
+													creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#0000ff', opacity: 0.3, lineStyle: 'dotted' } });
+											}
+										}
+									}
 								} else {
 									let droppedPiles = room.find(FIND_DROPPED_RESOURCES);
 									if (droppedPiles.length > 0) {
@@ -88,95 +100,87 @@ export const roleBuilder = {
 
 										if (target) {
 											if (creep.pickup(target) == ERR_NOT_IN_RANGE)
-												creep.moveTo(target, { visualizePathStyle: { stroke: '#0000ff', opacity: 0.3, lineStyle: 'dotted' } });
+												creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#0000ff', opacity: 0.3, lineStyle: 'dotted' } });
 										}
 									}
 								}
-							} else {
-								let droppedPiles = room.find(FIND_DROPPED_RESOURCES);
-								if (droppedPiles.length > 0) {
-									const target = pos.findClosestByRange(droppedPiles);
-
-									if (target) {
-										if (creep.pickup(target) == ERR_NOT_IN_RANGE)
-											creep.moveTo(target, { visualizePathStyle: { stroke: '#0000ff', opacity: 0.3, lineStyle: 'dotted' } });
-									}
-								}
+								break;
 							}
-						break;
+						}
+					} else {
+
+						let target;
+						if (rMem.settings.flags.closestConSites)
+							target = pos.findClosestByRange(cSites);
+						else
+							target = cSites[0];
+
+						if (target) {
+							if (creep.build(target) == ERR_NOT_IN_RANGE) creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#0000ff', opacity: 0.5, lineStyle: 'dotted', } });
+						} else {
+							let basics: AnyStructure[] = [];
+							let ramparts: StructureRampart[] = [];
+							let walls: StructureWall[] = [];
+							let validTargets: AnyStructure[] = [];
+							const rampartsMax = Memory.rooms[cMem.homeRoom].settings.repairSettings.repairRampartsTo;
+							const wallsMax = Memory.rooms[cMem.homeRoom].settings.repairSettings.repairWallsTo;
+
+							if (Memory.rooms[cMem.homeRoom].settings.flags.repairBasics) {
+								basics = room.find(FIND_STRUCTURES, { filter: (i) => (i.hits < i.hitsMax) && (i.structureType !== STRUCTURE_WALL && i.structureType !== STRUCTURE_RAMPART) });
+								validTargets = validTargets.concat(basics);
+							}
+
+							// add ramparts to the repair list, based on room flag & room max repair limit
+							if (Memory.rooms[cMem.homeRoom].settings.flags.repairRamparts) {
+								ramparts = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_RAMPART) && ((i.hits / i.hitsMax * 100) <= rampartsMax)) });
+								validTargets = validTargets.concat(ramparts);
+							}
+
+							// add walls to the repair list, based on room flag & room max repair limit
+							if (Memory.rooms[cMem.homeRoom].settings.flags.repairWalls) {
+								walls = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_WALL) && ((i.hits / i.hitsMax * 100) <= wallsMax)) })
+								validTargets = validTargets.concat(walls);
+							}
+
+							validTargets = validTargets.sort((a, b) => a.hits - b.hits);
+
+							if (validTargets.length > 0) {
+								if (creep.repair(validTargets[0]) == ERR_NOT_IN_RANGE) creep.moveTo(validTargets[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#0000ff', opacity: 0.5, lineStyle: 'dotted' } });
+							}
 						}
 					}
-				} else {
-
-          let target;
-          if (rMem.settings.flags.closestConSites)
-            target = pos.findClosestByRange(cSites);
-          else
-            target = cSites[0];
-
-          if (target) {
-						if (creep.build(target) == ERR_NOT_IN_RANGE) creep.moveTo(target, { visualizePathStyle: { stroke: '#0000ff', opacity: 0.5, lineStyle: 'dotted', }} );
-          } else {
-            let basics:				AnyStructure[]			= [];
-            let ramparts:			StructureRampart[]	= [];
-            let walls:				StructureWall[]			= [];
-            let validTargets:	AnyStructure[]			= [];
-            const rampartsMax = Memory.rooms[cMem.homeRoom].settings.repairSettings.repairRampartsTo;
-            const wallsMax = Memory.rooms[cMem.homeRoom].settings.repairSettings.repairWallsTo;
-
-            if (Memory.rooms[cMem.homeRoom].settings.flags.repairBasics) {
-              basics = room.find(FIND_STRUCTURES, { filter: (i) => (i.hits < i.hitsMax) && (i.structureType !== STRUCTURE_WALL && i.structureType !== STRUCTURE_RAMPART) } );
-              validTargets = validTargets.concat(basics);
-            }
-
-            // add ramparts to the repair list, based on room flag & room max repair limit
-            if (Memory.rooms[cMem.homeRoom].settings.flags.repairRamparts) {
-              ramparts = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_RAMPART) && ((i.hits / i.hitsMax * 100) <= rampartsMax)) });
-              validTargets = validTargets.concat(ramparts);
-            }
-
-            // add walls to the repair list, based on room flag & room max repair limit
-            if (Memory.rooms[cMem.homeRoom].settings.flags.repairWalls) {
-              walls = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_WALL) && ((i.hits / i.hitsMax * 100) <= wallsMax)) })
-              validTargets = validTargets.concat(walls);
-            }
-
-            validTargets = validTargets.sort((a, b) => a.hits - b.hits);
-
-            if (validTargets.length > 0) {
-              if (creep.repair(validTargets[0]) == ERR_NOT_IN_RANGE) creep.moveTo(validTargets[0], { visualizePathStyle: { stroke: '#0000ff', opacity: 0.5, lineStyle: 'dotted' }});
-            }
-          }
-        }
-      } else { // I HAVE A RALLY POINT, LET'S BOOGY!
-        if (cMem.rallyPoint instanceof Array) {
-          if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'solid', }, ignoreCreeps: true } );
-          else {
-            if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'solid', }, ignoreCreeps: true } );
-            console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
-            const nextWaypoint = cMem.rallyPoint.shift();
-            if (nextWaypoint === 'undefined') {
-              delete cMem.rallyPoint;
-              cMem.rallyPoint = 'none';
-            }
-          }
-        } else {
-					const rally = Game.flags[cMem.rallyPoint];
-					if (pos.isNearTo(rally)) {
-						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
-						cMem.rallyPoint = 'none';
+				} else { // I HAVE A RALLY POINT, LET'S BOOGY!
+					if (cMem.rallyPoint instanceof Array) {
+						if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
+						else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'solid', }, ignoreCreeps: false });
+						else {
+							if (cMem.rallyPoint.length > 1)
+								creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'solid', }, ignoreCreeps: false });
+							console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
+							const nextWaypoint = cMem.rallyPoint.shift();
+							if (nextWaypoint === 'undefined') {
+								delete cMem.rallyPoint;
+								cMem.rallyPoint = 'none';
+							}
+						}
+					} else {
+						const rally = Game.flags[cMem.rallyPoint];
+						if (pos.isNearTo(rally)) {
+							console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
+							cMem.rallyPoint = 'none';
+						}
+						else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'solid', }, ignoreCreeps: false });
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'solid', }, ignoreCreeps: true } );
 				}
+			} else {
+				if (!Memory.globalSettings.alertDisabled)
+					console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
+				creep.say('💤');
 			}
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
-  }
+		} catch (e: any) {
+			console.log(e.stack);
+		}
+	}
 };
 export const roleClaimer = {
 
@@ -219,10 +223,10 @@ export const roleClaimer = {
 
 					if (cMem.remoteWaypoints !== 'none') {
 						if (cMem.remoteWaypoints.length == 0) cMem.remoteWaypoints = 'none';
-						else if (!pos.isNearTo(Game.flags[cMem.remoteWaypoints[0]])) creep.moveTo(Game.flags[cMem.remoteWaypoints[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+						else if (!pos.isNearTo(Game.flags[cMem.remoteWaypoints[0]])) creep.moveTo(Game.flags[cMem.remoteWaypoints[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
 						else {
 							if (cMem.remoteWaypoints.length > 1)
-								creep.moveTo(Game.flags[cMem.remoteWaypoints[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+								creep.moveTo(Game.flags[cMem.remoteWaypoints[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
 							console.log(creep.name + ': Reached waypoint \'' + cMem.remoteWaypoints[0] + '\'');
 							const nextWaypoint = cMem.remoteWaypoints.shift();
 							console.log(nextWaypoint);
@@ -241,10 +245,10 @@ export const roleClaimer = {
 						const claimRoom = cMem.claimRoom;
 
 						if (room.name !== claimRoom) {
-								if (!pos.isNearTo(Game.flags[claimRoom])) creep.moveTo(Game.flags[claimRoom], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+								if (!pos.isNearTo(Game.flags[claimRoom])) creep.moveTo(Game.flags[claimRoom], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
 						} else {
 							if (creep.claimController(room.controller) == ERR_NOT_IN_RANGE)
-								creep.moveTo(room.controller, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+								creep.moveTo(room.controller, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
 							if (!room.controller.sign || room.controller.sign.username !== 'randomencounter')
 								creep.signController(room.controller, 'There\'s no place like 127.0.0.1');
 						}
@@ -253,10 +257,10 @@ export const roleClaimer = {
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -270,7 +274,7 @@ export const roleClaimer = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -318,7 +322,7 @@ export const roleCollector = {
 						} else if (target.store.getUsedCapacity() > 0) {
 
 							if (creep.withdraw(target, lootTypes[lootTypes.length - 1]) == ERR_NOT_IN_RANGE)
-								creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true })
+								creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false })
 						}
 					} else {
 						delete cMem.xferGoods;
@@ -327,7 +331,7 @@ export const roleCollector = {
 
 					if (cMem.xferGoods === true && creep.store.getFreeCapacity() > 0) {
 						if (!pos.isNearTo(room.storage))
-							creep.moveTo(room.storage, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+							creep.moveTo(room.storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 						else {
 
 							const creepLootTypes: ResourceConstant[] = Object.keys(creep.store) as ResourceConstant[];
@@ -356,7 +360,7 @@ export const roleCollector = {
 									console.log('lootTypes: ' + lootTypes);
 									creep.withdraw(target, lootTypes[lootTypes.length - 1]);
 								}
-								else creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+								else creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 
 							} else { // I NEED TO UNLOAD MY INVENTORY
 
@@ -368,7 +372,7 @@ export const roleCollector = {
 									console.log('creepLootTypes: ' + creepLootTypes);
 									creep.transfer(storage, creepLootTypes[creepLootTypes.length - 1]);
 									cMem.xferGoods = false;
-								}	else	creep.moveTo(storage, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' }, ignoreCreeps: true });
+								}	else	creep.moveTo(storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' }, ignoreCreeps: false });
 							}
 
 							const creepGonnaDie = creep.ticksToLive;
@@ -388,63 +392,65 @@ export const roleCollector = {
 
 							if (tombstoneItem.length > 1 || (tombstoneItem.length == 1 && tombstoneItem[0] !== RESOURCE_ENERGY)) cMem.tombXfer = true;
 							if (creep.withdraw(tombstones[0], tombstoneItem[0]) == ERR_NOT_IN_RANGE)
-								creep.moveTo(tombstones[0], { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'} });
+								creep.moveTo(tombstones[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'} });
 
 						} else { // NO TOMBSTONES, NEED TO FIND OTHER SOURCES OF ENERGY...
 
-								if (room.storage) { // IF RCL IS OVER 3 AND WE HAVE A STORAGE
-									let droppedPiles = room.find(FIND_DROPPED_RESOURCES);
-									droppedPiles = droppedPiles.sort((a, b) => b.amount - a.amount);
+							if (room.storage) { // IF RCL IS OVER 3 AND WE HAVE A STORAGE
+								let droppedPiles = room.find(FIND_DROPPED_RESOURCES);
+								droppedPiles = droppedPiles.sort((a, b) => b.amount - a.amount);
 
-									if (droppedPiles.length > 0) {
-										if (creep.pickup(droppedPiles[0]) == ERR_NOT_IN_RANGE)
-											creep.moveTo(droppedPiles[0], { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
-									} else {
+								if (droppedPiles.length > 0) {
+									if (creep.pickup(droppedPiles[0]) == ERR_NOT_IN_RANGE)
+										creep.moveTo(droppedPiles[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
+								} else {
 
-										if (!cMem.pickup) cMem.pickup = room.storage.id;
-										const storage = room.storage;
+									if (!cMem.pickup) cMem.pickup = room.storage.id;
+									const storage = room.storage;
 
-										if (room.storage.store[RESOURCE_ENERGY] >= creep.store.getCapacity()) {
+									if (room.storage.store[RESOURCE_ENERGY] >= creep.store.getCapacity()) {
 
-											if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-												creep.moveTo(storage, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
-										}
+										if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
+											creep.moveTo(storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 									}
-								} else { // IF RCL IS 3 OR LESS (AND THUS NO STORAGE)
+								}
+							} else { // IF RCL IS 3 OR LESS (AND THUS NO STORAGE)
 
-									let outboxes: Array<StructureContainer> = [];
+								let outboxes: Array<StructureContainer> = [];
 
-									if (rMem.settings.containerSettings.outboxes.length > 0) {
+								if (rMem.settings.containerSettings.outboxes.length > 0) {
 
-										let outboxIDs = rMem.settings.containerSettings.outboxes;
-										for (let i = 0; i < outboxIDs.length; i++) {
-											const outbox = Game.getObjectById(outboxIDs[i]);
-											outboxes.push(outbox);
-										}
-									} else {
-
-										const sources: Array<Source> = room.find(FIND_SOURCES);
-										for (let i = 0; i < sources.length; i++) {
-											const outbox: Array<StructureContainer> = sources[i].pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
-											if (outbox.length > 0) outboxes.push(outbox[0]);
-										}
+									let outboxIDs = rMem.settings.containerSettings.outboxes;
+									for (let i = 0; i < outboxIDs.length; i++) {
+										const outbox = Game.getObjectById(outboxIDs[i]);
+										outboxes.push(outbox);
 									}
+								} else {
 
-									if (outboxes.length > 0) {
-										outboxes = outboxes.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY]);
+									const sources: Array<Source> = room.find(FIND_SOURCES);
+									for (let i = 0; i < sources.length; i++) {
+										const outbox: Array<StructureContainer> = sources[i].pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
+										if (outbox.length > 0) outboxes.push(outbox[0]);
+									}
+								}
 
+								if (outboxes.length > 0) {
+									outboxes = outboxes.sort((a, b) => b.store[RESOURCE_ENERGY] - a.store[RESOURCE_ENERGY]);
+									if (outboxes[0].store[RESOURCE_ENERGY] < creep.store.getCapacity()) {
 										if (creep.withdraw(outboxes[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-											creep.moveTo(outboxes[0], { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+											creep.moveTo(outboxes[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 									} else {
 										let droppedPiles = room.find(FIND_DROPPED_RESOURCES);
 										droppedPiles = droppedPiles.sort((a, b) => b.amount - a.amount);
 
 										if (droppedPiles.length > 0) {
-											if (creep.pickup(droppedPiles[0]) == ERR_NOT_IN_RANGE)
-												creep.moveTo(droppedPiles[0], { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+											const closestPile = pos.findClosestByRange(droppedPiles);
+											if (creep.pickup(closestPile) == ERR_NOT_IN_RANGE)
+												creep.moveTo(closestPile, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 										}
 									}
 								}
+							}
 						}
 					} else { // IF MY STORE IS FULL OF ENERGY...
 						const targets: Array<StructureSpawn | StructureExtension> = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_SPAWN || i.structureType == STRUCTURE_EXTENSION) && i.store.getFreeCapacity(RESOURCE_ENERGY) > 0) });
@@ -453,7 +459,7 @@ export const roleCollector = {
 							const target: StructureSpawn | StructureExtension = pos.findClosestByRange(targets);
 
 							if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-								creep.moveTo(target, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+								creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 
 						} else { // NO SPAWNS/EXTENSIONS NEED FILLING, WHAT ABOUT TOWERS...?
 							let towers: StructureTower[] = room.find(FIND_MY_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_TOWER && (i.store.getFreeCapacity() !== 0) })
@@ -464,7 +470,7 @@ export const roleCollector = {
 							if (towers.length > 0) { // HEAD TO CLOSEST NON-FULL TOWER AND FILL IT
 
 								if (creep.transfer(towers[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-									creep.moveTo(towers[0], { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+									creep.moveTo(towers[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 							}
 						}
 					}
@@ -477,10 +483,10 @@ export const roleCollector = {
 						cMem.rallyPoint = 'none';
 
 					else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]]))
-						creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' }, ignoreCreeps: true });
+						creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' }, ignoreCreeps: false });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' }, ignoreCreeps: true });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' }, ignoreCreeps: false });
 
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
@@ -498,7 +504,7 @@ export const roleCollector = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		} else { // MY AI IS DISABLED, DURRRRR..... *drools*
@@ -613,10 +619,10 @@ export const roleCrane = {
             } else { // I HAVE A RALLY POINT, LET'S BOOGY!
                 if (cMem.rallyPoint instanceof Array) {
                     if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-                    else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+                    else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
                     else {
                         if (cMem.rallyPoint.length > 1)
-                            creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+                            creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
                         console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
                         const nextWaypoint = cMem.rallyPoint.shift();
                         if (nextWaypoint === 'undefined') {
@@ -630,7 +636,7 @@ export const roleCrane = {
                         console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
                         cMem.rallyPoint = 'none';
                     }
-                    else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+                    else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
                 }
             }
 		} else { // MY AI IS DISABLED, DURRRRR..... *drools*
@@ -670,7 +676,7 @@ export const roleHarvester = {
 					if (!cMem.source) creep.assignHarvestSource();
 					else {
 						const source = Game.getObjectById(cMem.source);
-						if (!pos.isNearTo(source)) creep.moveTo(source, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'dashed' } });
+						if (!pos.isNearTo(source)) creep.moveTo(source, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'dashed' } });
 						else creep.harvestEnergy();
 					}
 				} else {
@@ -682,7 +688,7 @@ export const roleHarvester = {
 							if (containers.length > 0) {
 								const target = pos.findClosestByRange(containers);
 
-								if (!pos.isNearTo(target)) creep.moveTo(target, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'dashed' } });
+								if (!pos.isNearTo(target)) creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'dashed' } });
 								else {
 									if (target.hits < target.hitsMax) creep.repair(target);
 									else {
@@ -712,7 +718,7 @@ export const roleHarvester = {
 									creep.unloadEnergy();
 									creep.harvestEnergy();
 								}
-								else creep.moveTo(dropBucket, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'dashed' } });
+								else creep.moveTo(dropBucket, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'dashed' } });
 							} else {
 								creep.unloadEnergy();
 								creep.harvestEnergy();
@@ -723,10 +729,10 @@ export const roleHarvester = {
       } else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' }, ignoreCreeps: true });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' }, ignoreCreeps: false });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' }, ignoreCreeps: true });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' }, ignoreCreeps: false });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -740,7 +746,7 @@ export const roleHarvester = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
     } else {
@@ -782,7 +788,7 @@ export const roleHealer = {
 					const target = pos.findClosestByRange(FIND_MY_CREEPS, { filter: (object) => object.memory.squad == cMem.squad && object.memory.subTeam == 'combatants' });
 
 					if (target) {
-						creep.moveTo(target, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+						creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 						if (pos.isNearTo(target)) {
 							if (target.hits < target.hitsMax) creep.heal(target);
 						}
@@ -794,7 +800,7 @@ export const roleHealer = {
 						const secondaryTarget = pos.findClosestByRange(FIND_MY_CREEPS, { filter: (object) => object.memory.squad == cMem.squad && (object.memory.subTeam == 'combatants' || object.memory.subTeam == 'healers') });
 
 						if (secondaryTarget) {
-							creep.moveTo(secondaryTarget, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+							creep.moveTo(secondaryTarget, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 							if (pos.isNearTo(secondaryTarget)) {
 								if (secondaryTarget.hits < secondaryTarget.hitsMax) creep.heal(secondaryTarget);
 							}
@@ -806,15 +812,15 @@ export const roleHealer = {
 				} else {
 					const musterFlag = cMem.squad + '-muster';
 					if (!pos.isNearTo(Game.flags[musterFlag]))
-						creep.moveTo(Game.flags[musterFlag], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+						creep.moveTo(Game.flags[musterFlag], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -828,7 +834,7 @@ export const roleHealer = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -903,7 +909,7 @@ export const roleInvader = {
 
 									case ERR_NOT_IN_RANGE:
 										creep.say('Moving to engage enemy combatant!');
-										creep.moveTo(nearestHostileCombatant, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+										creep.moveTo(nearestHostileCombatant, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 										break;
 									case OK:
 										creep.say('Attacking enemy combatant!');
@@ -921,7 +927,7 @@ export const roleInvader = {
 									switch (attackResult) {
 										case ERR_NOT_IN_RANGE:
 											creep.say('Moving to engage tower!');
-											creep.moveTo(closestHostileTowerByPath, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+											creep.moveTo(closestHostileTowerByPath, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 											break;
 										case OK:
 											creep.say('Attacking enemy tower!');
@@ -937,7 +943,7 @@ export const roleInvader = {
 										switch (attackResult) {
 											case ERR_NOT_IN_RANGE:
 												creep.say('Moving to engage enemy civilian!');
-												creep.moveTo(closestEnemyCivilian, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+												creep.moveTo(closestEnemyCivilian, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 												break;
 											case OK:
 												creep.say('Attacking enemy civilian!');
@@ -964,7 +970,7 @@ export const roleInvader = {
 								switch (attackResult) {
 									case ERR_NOT_IN_RANGE:
 										creep.say('Moving to engage enemy combatant!');
-										creep.moveTo(nearestHostileCombatant, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+										creep.moveTo(nearestHostileCombatant, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 										break;
 									case OK:
 										creep.say('Attacking enemy combatant!');
@@ -982,7 +988,7 @@ export const roleInvader = {
 									switch (attackResult) {
 										case ERR_NOT_IN_RANGE:
 											creep.say('Moving to engage tower!');
-											creep.moveTo(closestHostileTowerByPath, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+											creep.moveTo(closestHostileTowerByPath, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 											break;
 										case OK:
 											creep.say('Attacking enemy tower!');
@@ -999,7 +1005,7 @@ export const roleInvader = {
 										switch (attackResult) {
 											case ERR_NOT_IN_RANGE:
 												creep.say('Moving to engage enemy civilian!');
-												creep.moveTo(closestEnemyCivilian, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+												creep.moveTo(closestEnemyCivilian, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 												break;
 											case OK:
 												creep.say('Attacking enemy civilian!');
@@ -1040,7 +1046,7 @@ export const roleInvader = {
 								switch (dismantleResult) {
 									case ERR_NOT_IN_RANGE:
 										creep.say('Moving to dismantle enemy spawn!');
-										creep.moveTo(closestEnemySpawn, { visualizePathStyle: { stroke: '#ff0099', opacity: 0.8, lineStyle: 'solid' } });
+										creep.moveTo(closestEnemySpawn, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0099', opacity: 0.8, lineStyle: 'solid' } });
 										break;
 									case OK:
 										creep.say('Dismantling enemy spawn!');
@@ -1056,7 +1062,7 @@ export const roleInvader = {
 									switch (dismantleResult) {
 										case ERR_NOT_IN_RANGE:
 											creep.say('Moving to dismantle enemy structure!');
-											creep.moveTo(closestEnemyStructure, { visualizePathStyle: { stroke: '#ff0099', opacity: 0.8, lineStyle: 'solid' } });
+											creep.moveTo(closestEnemyStructure, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0099', opacity: 0.8, lineStyle: 'solid' } });
 											break;
 										case OK:
 											creep.say('Dismantling enemy structure!');
@@ -1068,7 +1074,7 @@ export const roleInvader = {
 									if (enemyConSites.length > 0) {
 										const closestEnemyConSite = pos.findClosestByRange(enemyConSites);
 										if (!pos.isEqualTo(closestEnemyConSite))
-											creep.moveTo(closestEnemyConSite, { visualizePathStyle: { stroke: '#ff0099', opacity: 0.8, lineStyle: 'solid' } })
+											creep.moveTo(closestEnemyConSite, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0099', opacity: 0.8, lineStyle: 'solid' } })
 									}
 								}
 							}
@@ -1083,10 +1089,10 @@ export const roleInvader = {
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -1100,7 +1106,7 @@ export const roleInvader = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -1153,10 +1159,10 @@ export const roleMiner = {
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -1170,7 +1176,7 @@ export const roleMiner = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -1210,17 +1216,17 @@ export const roleProvider = {
 					if (piles.length > 0) {
 						const closestPile = pos.findClosestByRange(piles);
 						if (creep.pickup(closestPile) == ERR_NOT_IN_RANGE)
-							creep.moveTo(closestPile, { visualizePathStyle: { stroke: '#ff0033', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+							creep.moveTo(closestPile, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0033', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 					} else {
 						const tombstones = room.find(FIND_TOMBSTONES, { filter: (i) => i.store.getUsedCapacity() > 0 });
 						if (tombstones.length > 0) {
 							const closestTombstone = pos.findClosestByRange(tombstones);
 							if (creep.withdraw(closestTombstone, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-								creep.moveTo(closestTombstone, { visualizePathStyle: { stroke: '#ff0033', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true })
+								creep.moveTo(closestTombstone, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0033', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false })
 						} else {
 							const storage = room.storage;
 							if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-								creep.moveTo(storage, { visualizePathStyle: { stroke: '#ff0033', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+								creep.moveTo(storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0033', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 						}
 					}
 				} else {
@@ -1233,16 +1239,16 @@ export const roleProvider = {
 						if (pos.isNearTo(logSpot))
 							creep.drop(RESOURCE_ENERGY);
 						else
-							creep.moveTo(logSpot, { visualizePathStyle: { stroke: '#ff0033', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true })
+							creep.moveTo(logSpot, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0033', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false })
 					}
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -1256,7 +1262,7 @@ export const roleProvider = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -1297,7 +1303,7 @@ export const roleRanger = {
 
 				if (target) {
 					if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
-						creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+						creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 				} else {
 
 					let structures = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
@@ -1308,16 +1314,16 @@ export const roleRanger = {
 
 					if (target) {
 						if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
-							creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+							creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 					}
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -1331,7 +1337,7 @@ export const roleRanger = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -1377,16 +1383,16 @@ export const roleRebooter = {
                     });
                     if (targets.length > 0) {
                         const target = creep.pos.findClosestByRange(targets);
-                        if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+                        if (creep.transfer(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff' } });
                     }
                 }
             } else { // I HAVE A RALLY POINT, LET'S BOOGY!
                 if (cMem.rallyPoint instanceof Array) {
                     if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-                    else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+                    else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
                     else {
                         if (cMem.rallyPoint.length > 1)
-                            creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+                            creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
                         console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
                         const nextWaypoint = cMem.rallyPoint.shift();
                         if (nextWaypoint === 'undefined') {
@@ -1400,7 +1406,7 @@ export const roleRebooter = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		} else {
@@ -1444,7 +1450,7 @@ export const roleRemoteBuilder = {
 				const workPos = new RoomPosition(workPosX, workPosY, cMem.workRoom);
 
 				// if not in workRoom, travel to workRoom RoomPosition
-				if (room.name !== cMem.workRoom) creep.moveTo(workPos, { visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+				if (room.name !== cMem.workRoom) creep.moveTo(workPos, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				else {
 					if (creep.store[RESOURCE_ENERGY] == 0) creep.say('🔼');
 					if (creep.store.getFreeCapacity() == 0) creep.say('🏗️');
@@ -1457,7 +1463,7 @@ export const roleRemoteBuilder = {
 							const tombstone = pos.findClosestByRange(tombstones);
 							if (tombstone) {
 								if (creep.withdraw(tombstone, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
-									creep.moveTo(tombstone,{ visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+									creep.moveTo(tombstone,{ reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 							}
 						} else {
 							const droppedPiles = room.find(FIND_DROPPED_RESOURCES);
@@ -1465,7 +1471,7 @@ export const roleRemoteBuilder = {
 								const closestPile = pos.findClosestByRange(droppedPiles);
 								if (closestPile) {
 									if (creep.pickup(closestPile) === ERR_NOT_IN_RANGE)
-										creep.moveTo(closestPile,{ visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+										creep.moveTo(closestPile,{ reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 								}
 							} else {
 								const containersWithEnergy = room.find(FIND_STRUCTURES, { filter: (i) => (i.structureType == STRUCTURE_CONTAINER || i.structureType == STRUCTURE_STORAGE) && i.store[RESOURCE_ENERGY] > 0 });
@@ -1473,7 +1479,7 @@ export const roleRemoteBuilder = {
 									const container = pos.findClosestByRange(containersWithEnergy);
 									if (container) {
 										if (creep.withdraw(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
-											creep.moveTo(container,{ visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+											creep.moveTo(container,{ reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 									}
 								}
 							}
@@ -1483,17 +1489,17 @@ export const roleRemoteBuilder = {
 						if (targets.length) {
 							//targets = pos.findClosestByRange(targets);
 							if (creep.build(targets[0]) == ERR_NOT_IN_RANGE)
-								creep.moveTo(targets[0], { visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+								creep.moveTo(targets[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 						}
 					}
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -1507,7 +1513,7 @@ export const roleRemoteBuilder = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -1544,25 +1550,25 @@ export const roleRemoteGuard = {
 				else if (pos.y == 0 )	creep.move(BOTTOM	);
 
 				if (room.name !== outpostRoom) {
-					creep.moveTo(Game.flags[outpostRoom], { visualizePathStyle: { stroke: '#ff0000', opacity: 0.3, lineStyle: 'solid'}, ignoreCreeps: true });
+					creep.moveTo(Game.flags[outpostRoom], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.3, lineStyle: 'solid'}, ignoreCreeps: false });
 				} else {
 					const hostiles = room.find(FIND_HOSTILE_CREEPS);
 					if (hostiles.length > 0) {
 						const target = pos.findClosestByRange(hostiles);
 						if (creep.attack(target) == ERR_NOT_IN_RANGE)
-							creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.3, lineStyle: 'solid'}, ignoreCreeps: true });
+							creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.3, lineStyle: 'solid'}, ignoreCreeps: false });
 					} else {
 						if (!pos.isNearTo(Game.flags[outpostRoom]))
-							creep.moveTo(Game.flags[outpostRoom], { visualizePathStyle: { stroke: '#ff0000', opacity: 0.3, lineStyle: 'solid'}, ignoreCreeps: true });
+							creep.moveTo(Game.flags[outpostRoom], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.3, lineStyle: 'solid'}, ignoreCreeps: false });
 					}
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -1576,7 +1582,7 @@ export const roleRemoteGuard = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		} else {
@@ -1616,7 +1622,7 @@ export const roleRemoteHarvester = {
 						if (containers.length > 0) {
 							const target = pos.findClosestByRange(containers);
 
-							if (!pos.isNearTo(target)) creep.moveTo(target, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'dashed' } });
+							if (!pos.isNearTo(target)) creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.5, lineStyle: 'dashed' } });
 							else {
 								if (target.hits < target.hitsMax) creep.repair(target);
 								else {
@@ -1647,10 +1653,10 @@ export const roleRemoteHarvester = {
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -1664,7 +1670,7 @@ export const roleRemoteHarvester = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		} else {
@@ -1700,7 +1706,7 @@ export const roleRemoteLogistician = {
 					const result = creep.withdraw(homeStorage, RESOURCE_ENERGY)
 					switch (result) {
 						case ERR_NOT_IN_RANGE:
-							creep.moveTo(homeStorage, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: true });
+							creep.moveTo(homeStorage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: false });
 							break;
 						case OK:
 							cMem.initialEnergy = true;
@@ -1715,7 +1721,7 @@ export const roleRemoteLogistician = {
 							const cTarget: AnyStructure = Game.getObjectById(cMem.customTarget);
 
 							if (creep.withdraw(cTarget, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-								creep.moveTo(cTarget, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: true });
+								creep.moveTo(cTarget, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: false });
 						} else {
 							let droppedPiles = room.find(FIND_DROPPED_RESOURCES);
 							if (droppedPiles.length > 0) {
@@ -1725,14 +1731,14 @@ export const roleRemoteLogistician = {
 								}
 								droppedPiles = droppedPiles.sort((a, b) => b.amount - a.amount);
 								if (creep.pickup(droppedPiles[0]) === ERR_NOT_IN_RANGE)
-									creep.moveTo(droppedPiles[0], { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: true });
+									creep.moveTo(droppedPiles[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: false });
 							} else {
 								// No dropped resources, if we're at home room just fill from storage (typically at spawn time)
 								if (creep.room.name === cMem.homeRoom) {
 									const homeStorage: StructureStorage = Game.getObjectById(cMem.storage);
 									if (homeStorage) {
 										if (creep.withdraw(homeStorage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
-											creep.moveTo(homeStorage, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: true });
+											creep.moveTo(homeStorage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: false });
 									}
 								}
 							}
@@ -1746,14 +1752,14 @@ export const roleRemoteLogistician = {
 							if (workerCreeps.length > 0) {
 								const result = creep.transfer(workerCreeps[0], RESOURCE_ENERGY);
 								if (result == ERR_NOT_IN_RANGE) {
-									creep.moveTo(workerCreeps[0], { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted' } });
+									creep.moveTo(workerCreeps[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted' } });
 									creep.transfer(workerCreeps[0], RESOURCE_ENERGY);
 								}
 							} else {
 								const containers = pos.findInRange(FIND_STRUCTURES, 3, { filter: { structureType: STRUCTURE_CONTAINER } });
 								if (containers.length > 0) {
 									if (creep.transfer(containers[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-										creep.moveTo(containers[0], { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: true })
+										creep.moveTo(containers[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: false })
 									else {
 										creep.drop(RESOURCE_ENERGY);
 										const myPile: Array<Resource> = pos.findInRange(FIND_DROPPED_RESOURCES, 2);
@@ -1763,15 +1769,15 @@ export const roleRemoteLogistician = {
 								}
 							}
 						} else // If the creep is not at the target position, move towards it
-							creep.moveTo(targetPosition, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: true });
+							creep.moveTo(targetPosition, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'dotted'}, ignoreCreeps: false });
 					} // end of primary logic
 				} else { // I HAVE A RALLY POINT, LET'S BOOGY!
 					if (cMem.rallyPoint instanceof Array) {
 						if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-						else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+						else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
 						else {
 							if (cMem.rallyPoint.length > 1)
-								creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+								creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
 							console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
 							const nextWaypoint = cMem.rallyPoint.shift();
 							if (nextWaypoint === 'undefined') {
@@ -1785,7 +1791,7 @@ export const roleRemoteLogistician = {
 							console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 							cMem.rallyPoint = 'none';
 						}
-						else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+						else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 					}
 				}
 			}
@@ -1834,10 +1840,10 @@ export const roleRemoteRunner = {
 					const target = Game.getObjectById(cMem.pickup);
 
 					if (target) {
-						if (creep.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) creep.moveTo(target, { visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+						if (creep.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 					} else {
 						if (creep.room.name !== cMem.outpostRoom)
-							creep.moveTo(Game.flags[cMem.outpostRoom], { visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+							creep.moveTo(Game.flags[cMem.outpostRoom], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 					}
 				}
 
@@ -1850,17 +1856,17 @@ export const roleRemoteRunner = {
 						else {
 							const roadUnderCreep = room.find(FIND_STRUCTURES, { filter: (i) => (i.structureType == STRUCTURE_ROAD && i.pos.x == pos.x && i.pos.y == pos.y && i.hits !== i.hitsMax) })
 							if (roadUnderCreep.length > 0) creep.repair(roadUnderCreep[0]);
-							else creep.moveTo(target, { visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+							else creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 						}
 					}
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -1874,7 +1880,7 @@ export const roleRemoteRunner = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
     } else {
@@ -1917,7 +1923,7 @@ export const roleRepairer = {
 							});
 							if (target) {
 								if (creep.withdraw(target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-									creep.moveTo(target, { visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+									creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 							}
 							break;
 						}
@@ -1929,7 +1935,7 @@ export const roleRepairer = {
 								const tombstone = pos.findClosestByRange(tombstones);
 								if (tombstone) {
 									if (creep.withdraw(tombstone, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
-										creep.moveTo(tombstone, { visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+										creep.moveTo(tombstone, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 								}
 							} else {
 								const droppedPiles = room.find(FIND_DROPPED_RESOURCES);
@@ -1937,7 +1943,7 @@ export const roleRepairer = {
 									const closestPile = pos.findClosestByRange(droppedPiles);
 									if (closestPile) {
 										if (creep.pickup(closestPile) === ERR_NOT_IN_RANGE)
-											creep.moveTo(closestPile, { visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+											creep.moveTo(closestPile, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 									}
 								} else {
 									const containersWithEnergy = room.find(FIND_STRUCTURES, { filter: (i) => (i.structureType == STRUCTURE_CONTAINER || i.structureType == STRUCTURE_STORAGE) && i.store[RESOURCE_ENERGY] > 0 });
@@ -1945,7 +1951,7 @@ export const roleRepairer = {
 										const container = pos.findClosestByRange(containersWithEnergy);
 										if (container) {
 											if (creep.withdraw(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
-												creep.moveTo(container, { visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+												creep.moveTo(container, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 										}
 									}
 								}
@@ -1959,7 +1965,7 @@ export const roleRepairer = {
 					if (tower) {
 						// transfer energy
 						if (creep.transfer(tower, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-							creep.moveTo(tower, { visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'solid'}, ignoreCreeps: true });
+							creep.moveTo(tower, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'solid'}, ignoreCreeps: false });
 					} else {
 						// towers are stocked up, look for fix'er'uppers
 						let basics: AnyStructure[] = [];
@@ -1993,7 +1999,7 @@ export const roleRepairer = {
 						// travel to closest object within repair criteria and start repairing!
 						if (target) {
 							if (creep.repair(target) == ERR_NOT_IN_RANGE)
-								creep.moveTo(target, { visualizePathStyle: { stroke: '#ff6600', lineStyle: 'dashed', opacity: 0.3}, ignoreCreeps: true });
+								creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', lineStyle: 'dashed', opacity: 0.3}, ignoreCreeps: false });
 						}
 					}
 				}
@@ -2001,11 +2007,11 @@ export const roleRepairer = {
 				if (cMem.rallyPoint instanceof Array) {
 					const rally: Flag = Game.flags[cMem.rallyPoint[0]];
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(rally)) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(rally)) creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(rally)) creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
 					else {
 						const nextRally: Flag = Game.flags[cMem.rallyPoint[1]];
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(nextRally, { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(nextRally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -2019,7 +2025,7 @@ export const roleRepairer = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
     } else {
@@ -2059,24 +2065,24 @@ export const roleReserver = {
 				if (room.name == cMem.targetRoom) {
 					if (!rMem.objects) room.cacheObjects();
 					if (Game.rooms[room.name].controller.owner === undefined) {
-						if (creep.reserveController(room.controller) == ERR_NOT_IN_RANGE) creep.moveTo(room.controller, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.3 } });
+						if (creep.reserveController(room.controller) == ERR_NOT_IN_RANGE) creep.moveTo(room.controller, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.3 } });
 					} else if (typeof Game.rooms[room.name].controller.owner === 'object') {
 						if (Game.rooms[room.name].controller.owner.username !== 'randomencounter') {
-							if (creep.attackController(room.controller) == ERR_NOT_IN_RANGE) creep.moveTo(room.controller, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.3 } });
+							if (creep.attackController(room.controller) == ERR_NOT_IN_RANGE) creep.moveTo(room.controller, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.3 } });
 						}
 					}
 					if (!room.controller.sign)
 						creep.signController(room.controller, 'There\'s no place like 127.0.0.1');
 				} else {
-					if (Game.flags[cMem.targetRoom]) creep.moveTo(Game.flags[cMem.targetRoom], { visualizePathStyle: { stroke: '#ffffff', opacity: 0.3 } });
+					if (Game.flags[cMem.targetRoom]) creep.moveTo(Game.flags[cMem.targetRoom], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.3 } });
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -2090,7 +2096,7 @@ export const roleReserver = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -2135,12 +2141,12 @@ export const roleRunner = {
 
 						if (piles.length > 0) {
 							if (creep.pickup(piles[0]) == ERR_NOT_IN_RANGE)
-								creep.moveTo(piles[0], { visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted' } });
+								creep.moveTo(piles[0], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted' } });
 						}
 					} else {
 						const target = Game.getObjectById(cMem.pickup);
 						if (target) {
-							if (creep.withdraw(target, cMem.cargo) == ERR_NOT_IN_RANGE) creep.moveTo(target, { visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted' } });
+							if (creep.withdraw(target, cMem.cargo) == ERR_NOT_IN_RANGE) creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted' } });
 						}
 					}
 				} else {
@@ -2154,19 +2160,19 @@ export const roleRunner = {
 								const roadUnderCreep = room.find(FIND_STRUCTURES, { filter: (i) => (i.structureType == STRUCTURE_ROAD && i.pos.x == pos.x && i.pos.y == pos.y && i.hits !== i.hitsMax) })
 								const roadTarget = pos.findClosestByRange(roadUnderCreep);
 								if (roadUnderCreep.length > 0) creep.repair(roadUnderCreep[0]);
-								else creep.moveTo(target, { visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+								else creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 							}
-							else creep.moveTo(target, { visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+							else creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#880088', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 						}
 					}
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -2180,7 +2186,7 @@ export const roleRunner = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -2233,32 +2239,32 @@ export const roleScientist = {
 						if (reagentLab1.store[RESOURCE_ENERGY] < 2000) {
 							if (creep.store[RESOURCE_ENERGY] == 0) {
 								if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-									creep.moveTo(storage, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
+									creep.moveTo(storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
 							}
 						} else if (reagentLab2.store[RESOURCE_ENERGY] < 2000) {
 							if (creep.store[RESOURCE_ENERGY] == 0) {
 								if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
-									creep.moveTo(storage, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
+									creep.moveTo(storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
 							}
 						} else if (rMem.settings.flags.doScience) {
 							if (reagentLab1.store[baseReg1] < 3000) {
 								if (creep.store[baseReg1] == 0) {
 									if (creep.withdraw(storage, baseReg1) == ERR_NOT_IN_RANGE)
-										creep.moveTo(storage, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
+										creep.moveTo(storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
 								}
 							} else if (reagentLab2.store[baseReg2] < 3000) {
 								if (creep.store[baseReg2] == 0) {
 									if (creep.withdraw(storage, baseReg2) == ERR_NOT_IN_RANGE)
-										creep.moveTo(storage, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
+										creep.moveTo(storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
 								}
 							} else reactionLab1.runReaction(reagentLab1, reagentLab2);
 
 							if (reactionLab1.store[outputChem] > 0) {
 								if (creep.withdraw(reactionLab1, outputChem) == ERR_NOT_IN_RANGE)
-									creep.moveTo(reactionLab1, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
+									creep.moveTo(reactionLab1, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
 							} else {
 								if (creep.transfer(storage, outputChem) == ERR_NOT_IN_RANGE)
-									creep.moveTo(storage, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
+									creep.moveTo(storage, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffffff', opacity: 0.8, lineStyle: 'solid' } });
 							}
 						}
 					}
@@ -2266,10 +2272,10 @@ export const roleScientist = {
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -2283,7 +2289,7 @@ export const roleScientist = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
     } else {
@@ -2340,15 +2346,15 @@ export const roleScout = {
 						delete cMem._move;
 					}
 					else if (room.name !== cMem.targetRoom)
-						creep.moveTo(goToPos, { visualizePathStyle: { stroke: '#ff00ff', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: true });
+						creep.moveTo(goToPos, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff00ff', opacity: 0.5, lineStyle: 'solid'}, ignoreCreeps: false });
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
 						const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -2362,7 +2368,7 @@ export const roleScout = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else {
@@ -2443,7 +2449,7 @@ export const roleUpgrader = {
 
 							if (pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTROLLER } }).length == 0) creep.moveTo(room.controller);
 
-							if (creep.withdraw(mainBucket, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) creep.moveTo(mainBucket, { visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+							if (creep.withdraw(mainBucket, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) creep.moveTo(mainBucket, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 						}
 					}
 
@@ -2455,7 +2461,7 @@ export const roleUpgrader = {
 								const tombstone = pos.findClosestByRange(tombstones);
 								if (tombstone) {
 									if (creep.withdraw(tombstone, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
-										creep.moveTo(tombstone, { visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+										creep.moveTo(tombstone, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 								}
 							} else {
 								const droppedPiles = room.find(FIND_DROPPED_RESOURCES);
@@ -2463,7 +2469,7 @@ export const roleUpgrader = {
 									const closestPile = pos.findClosestByRange(droppedPiles);
 									if (closestPile) {
 										if (creep.pickup(closestPile) === ERR_NOT_IN_RANGE)
-											creep.moveTo(closestPile, { visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+											creep.moveTo(closestPile, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 									}
 								} else {
 									const containersWithEnergy = room.find(FIND_STRUCTURES, { filter: (i) => (i.structureType == STRUCTURE_CONTAINER || i.structureType == STRUCTURE_STORAGE) && i.store[RESOURCE_ENERGY] > 0 });
@@ -2471,7 +2477,7 @@ export const roleUpgrader = {
 										const container = pos.findClosestByRange(containersWithEnergy);
 										if (container) {
 											if (creep.withdraw(container, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
-												creep.moveTo(container, { visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+												creep.moveTo(container, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff6600', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 										}
 									}
 								}
@@ -2485,15 +2491,15 @@ export const roleUpgrader = {
 							creep.repair(mainBucket);
 					}
 					if (creep.upgradeController(room.controller) == ERR_NOT_IN_RANGE)
-						creep.moveTo(room.controller, { visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: true });
+						creep.moveTo(room.controller, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ffff00', opacity: 0.3, lineStyle: 'dotted' }, ignoreCreeps: false });
 				}
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ff00', opacity: 0.3, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -2507,7 +2513,7 @@ export const roleUpgrader = {
 						console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 						cMem.rallyPoint = 'none';
 					}
-					else creep.moveTo(rally, { visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: true });
+					else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted'}, ignoreCreeps: false });
 				}
 			}
 		}	else { // AI IS DISABLED
@@ -2551,21 +2557,21 @@ export const roleWarrior = {
 						const cAT: AnyStructure = Game.getObjectById(cMem.customTarget)
 						if (creep.getActiveBodyparts(WORK) > 0) {
 							if (creep.dismantle(cAT) == ERR_NOT_IN_RANGE)
-								creep.moveTo(cAT, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+								creep.moveTo(cAT, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 						} else {
 							if (creep.attack(cAT) == ERR_NOT_IN_RANGE)
-								creep.moveTo(cAT, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+								creep.moveTo(cAT, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 						}
 					} else {
 						if (room.name !== cMem.attackRoom) {
-							creep.moveTo(Game.flags[cMem.attackRoom], { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+							creep.moveTo(Game.flags[cMem.attackRoom], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 						} else {
 							const hostiles = room.find(FIND_HOSTILE_CREEPS);
 							const target = pos.findClosestByRange(hostiles);
 
 							if (target) {
 								if (creep.attack(target) == ERR_NOT_IN_RANGE)
-									creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+									creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 							} else {
 								const towers = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
 								const target = pos.findClosestByRange(towers);
@@ -2573,10 +2579,10 @@ export const roleWarrior = {
 								if (target) {
 									if (creep.getActiveBodyparts(WORK) > 0) {
 										if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
-											creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+											creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 									} else {
 										if (creep.attack(target) == ERR_NOT_IN_RANGE)
-											creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+											creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 									}
 								} else {
 									const spawns = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_SPAWN } });
@@ -2585,10 +2591,10 @@ export const roleWarrior = {
 									if (target) {
 										if (creep.getActiveBodyparts(WORK) > 0) {
 											if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
-												creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+												creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 										} else {
 											if (creep.attack(target) == ERR_NOT_IN_RANGE)
-												creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+												creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 										}
 									} else {
 										const structures = room.find(FIND_HOSTILE_STRUCTURES);
@@ -2596,16 +2602,16 @@ export const roleWarrior = {
 										if (target) {
 											if (creep.getActiveBodyparts(WORK) > 0) {
 												if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
-													creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+													creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 											} else {
 												if (creep.attack(target) == ERR_NOT_IN_RANGE)
-													creep.moveTo(target, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+													creep.moveTo(target, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 											}
 										} else if (creep.getActiveBodyparts(CLAIM) > 0) {
 											const controller = room.controller;
 
 											if (creep.attackController(controller) == ERR_NOT_IN_RANGE)
-												creep.moveTo(controller, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+												creep.moveTo(controller, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 										}
 									}
 								}
@@ -2615,14 +2621,14 @@ export const roleWarrior = {
 				}
 				const musterFlag = cMem.squad + '-muster';
 				if (!pos.isNearTo(Game.flags[musterFlag]))
-					creep.moveTo(Game.flags[musterFlag], { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+					creep.moveTo(Game.flags[musterFlag], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 			} else { // I HAVE A RALLY POINT, LET'S BOOGY!
         if (cMem.rallyPoint instanceof Array) {
           if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+          else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
           else {
             if (cMem.rallyPoint.length > 1)
-              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+              creep.moveTo(Game.flags[cMem.rallyPoint[1]], { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
             console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint[0] + '\'');
             const nextWaypoint = cMem.rallyPoint.shift();
             if (nextWaypoint === 'undefined') {
@@ -2636,7 +2642,7 @@ export const roleWarrior = {
 							console.log(creep.name + ': Reached rally point \'' + cMem.rallyPoint + '\'');
 							cMem.rallyPoint = 'none';
 						}
-						else creep.moveTo(rally, { visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
+						else creep.moveTo(rally, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#ff0000', opacity: 0.5, lineStyle: 'solid' } });
 					}
 			}
 		}	else {
