@@ -8215,7 +8215,7 @@ const loop = ErrorMapper.wrapLoop(() => {
                 availableVariants.crane = spawnVariants.crane300;
             }
             else if (room.energyCapacityAvailable <= 500) {
-                availableVariants.harvester = spawnVariants.harvester350;
+                availableVariants.harvester = spawnVariants.harvester450;
                 availableVariants.collector = spawnVariants.collector300;
                 availableVariants.upgrader = spawnVariants.upgrader400;
                 availableVariants.builder = spawnVariants.builder350;
@@ -8223,9 +8223,9 @@ const loop = ErrorMapper.wrapLoop(() => {
                 availableVariants.runner = spawnVariants.runner300;
                 availableVariants.crane = spawnVariants.crane300;
             }
-            else if (room.energyCapacityAvailable <= 600) {
+            else if (room.energyCapacityAvailable <= 550) {
                 availableVariants.harvester = spawnVariants.harvester550;
-                availableVariants.collector = spawnVariants.collector500;
+                availableVariants.collector = spawnVariants.collector300;
                 availableVariants.upgrader = spawnVariants.upgrader550;
                 availableVariants.builder = spawnVariants.builder500;
                 availableVariants.repairer = spawnVariants.repairer500;
