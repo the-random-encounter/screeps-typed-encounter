@@ -1,0 +1,33 @@
+# npm lock file (v5.0.0+)
+./package-lock.json
+
+# Ignore basic folders
+/node_modules
+/docs
+
+# TypeScript definitions installed by Typings
+/typings
+
+# Screeps Config
+screeps.json
+
+# ScreepsServer data from integration tests
+/server
+
+# Numerous always-ignore extensions
+*.diff
+*.err
+*.orig
+*.log
+*.rej
+*.swo
+*.swp
+*.zip
+*.vi
+*~
+
+# Editor folders
+./.vscode/
+.eslintrc.js
+.editorconfig
+.prettierrc

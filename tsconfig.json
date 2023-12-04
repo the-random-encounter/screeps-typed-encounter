@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "lib": ["es2017"],
+    "target": "es2017",
+    "moduleResolution": "Node",
+    "outDir": "dist",
+    "baseUrl": "src/",
+    //"sourceMap": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "removeComments": true,
+    //"experimentalDecorators": true,
+    "noImplicitReturns": false,
+    "allowSyntheticDefaultImports": true,
+    "allowUnreachableCode": true,
+    "strictNullChecks": false,
+    "esModuleInterop": true,
+    "checkJs": true,
+    "allowJs": true,
+    "resolveJsonModule": true
+  },
+  "exclude": ["node_modules", "rollup.config.js"]
+}
