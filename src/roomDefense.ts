@@ -6,6 +6,10 @@ export function roomDefense(room: Room) {
 	_.forEach(towers, function (tower: StructureTower) {
 		if (tower) {
 
+      Game.map.visual.rect(
+        new RoomPosition(tower.pos.x - 5, tower.pos.y - 5, tower.pos.roomName),
+        11, 11, { fill: 'transparent', stroke: '#ff0000' });
+
 			const tID: Id<StructureTower> = tower.id;
 			const closestHostile: Creep = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
 
@@ -13,24 +17,11 @@ export function roomDefense(room: Room) {
 				tower.room.visual.circle(tower.pos, { fill: '#110000', radius: 35, stroke: '#ff0000', opacity: 0.3, lineStyle: 'dashed' });
 				tower.attack(closestHostile);
 			} else {
-				const closestDamagedCreep: Creep = tower.pos.findClosestByRange(FIND_MY_CREEPS, {
-					filter: (creep) => creep.hits < creep.hitsMax
-				});
+				const closestDamagedCreep: Creep = tower.pos.findClosestByRange(FIND_MY_CREEPS, { filter: (creep) => creep.hits < creep.hitsMax });
 
 				if (closestDamagedCreep) {
 					tower.heal(closestDamagedCreep);
-				} else {/*
-					if (tower.room.memory.data.towerLRT === undefined)
-						tower.room.memory.data.towerLRT = '';
-
-					if (tower.room.memory.data.towerLRT !== '') {
-						const lastRT = Game.getObjectById(tower.room.memory.data.towerLRT)
-						if (lastRT.hits < lastRT.hitsMax)
-							tower.repair(lastRT);
-						else if (lastRT.hits == lastRT.hitsMax)
-							tower.room.memory.data.towerLRT = '';
-
-					} else {*/
+				} else {
 						if (tower.room.memory.settings.flags.towerRepairBasic == true) {
 
 							let ramparts: Array<StructureRampart> = [];
