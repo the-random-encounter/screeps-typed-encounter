@@ -31,6 +31,9 @@ screeps.json
 *.vi
 *~
 
+src/blueprints.json
+src/manager.ts
+
 # Editor folders
 .vscode/
 .vscode
