@@ -11,6 +11,7 @@ import 'prototypes/creepFunctions';
 import 'prototypes/roomFunctions';
 import 'prototypes/roomPositionFunctions';
 import 'prototypes/spawnFunctions';
+import { Reserver } from '../host/room/creeps/creepClasses';
 
 // PURPOSE define pre-configured creep bodypart arrays as key/value pairs in an object
 const spawnVariants: {[key: string]: Array<BodyPartConstant>} = {
@@ -62,7 +63,9 @@ const spawnVariants: {[key: string]: Array<BodyPartConstant>} = {
   'healer1200':      [ TOUGH , TOUGH , TOUGH , TOUGH , TOUGH , MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, HEAL, HEAL, HEAL ],
   'remoteGuard700':  [ TOUGH , TOUGH , TOUGH , TOUGH , TOUGH , MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK ],
   'remoteLogi1200':  [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE ],
-  'remoteLogi1500':  [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE ]
+  'remoteLogi1500': [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE ],
+  'reserver650':    [ MOVE, CLAIM ],
+  'reserver1300':   [ MOVE, MOVE, CLAIM, CLAIM ]
 }
 
 // PURPOSE define working variant set for use in the main loop, assigned based on current energy capacity limits
@@ -76,7 +79,8 @@ let availableVariants:{[key: string]: Array<BodyPartConstant>} = {
   'warrior':     [],
   'crane':       [],
   'remoteGuard': [],
-  'remoteLogi':  []
+  'remoteLogi':  [],
+  'reserver':    [],
 }
 
 // PURPOSE declare creep counting integers for spawning purposes
@@ -1390,6 +1394,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
         availableVariants.runner       = spawnVariants.runner300;
         availableVariants.crane        = spawnVariants.crane500;
         availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.reserver     = spawnVariants.reserver650;
       } else if (room.energyCapacityAvailable <= 900) {
         availableVariants.harvester    = spawnVariants.harvester550;
         availableVariants.collector    = spawnVariants.collector500;
@@ -1418,6 +1423,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
         availableVariants.crane        = spawnVariants.crane500;
         availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
         availableVariants.remoteLogi   = spawnVariants.remoteLogi1200;
+        availableVariants.reserver     = spawnVariants.reserver1300;
       } else if (room.energyCapacityAvailable > 1600) {
         availableVariants.harvester    = spawnVariants.harvester550;
         availableVariants.collector    = spawnVariants.collector500;
@@ -1430,6 +1436,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
         availableVariants.warrior      = spawnVariants.warrior1400;
         availableVariants.healer       = spawnVariants.healer1200;
         availableVariants.remoteLogi   = spawnVariants.remoteLogi1500;
+        availableVariants.reserver     = spawnVariants.reserver1300;
       }
 
       let creepCount: number = 0;
@@ -1629,7 +1636,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
               }
             } else if ((reservers.length < reserverTarget) || (reservers.length <= reserverTarget && reserverDying && reserverTarget !== 0)) {
               newName = colonyName + '_Rv' + reserverCount;
-              while (readySpawn.spawnCreep([MOVE, MOVE, CLAIM, CLAIM], newName, { memory: { role: 'reserver', roleForQuota: 'reserver', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+              while (readySpawn.spawnCreep(availableVariants.reserver, newName, { memory: { role: 'reserver', roleForQuota: 'reserver', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
                 reserverCount++;
                 newName = colonyName + '_Rv' + reserverCount;
               }

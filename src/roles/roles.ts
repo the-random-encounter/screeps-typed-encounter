@@ -97,7 +97,7 @@ export const roleBuilder = {
                     }
                   } else {
 
-                    const closestBox = cSites[0].pos.findClosestByRange(outboxes);
+                    const closestBox = pos.findClosestByRange(outboxes);
                     if (closestBox.store[RESOURCE_ENERGY] > 0) {
                       if (creep.withdraw(closestBox, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE)
                         creep.moveTo(closestBox, { reusePath: Memory.globalSettings.reusePathValue, visualizePathStyle: { stroke: '#00ffff', opacity: 0.3, lineStyle: 'dotted' } });
