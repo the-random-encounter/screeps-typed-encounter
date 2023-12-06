@@ -1,5 +1,5 @@
 import { validateFlagName } from './miscFunctions';
-
+import { pathing } from '../roles/roles';
 Creep.prototype.findEnergySource = function (): Source {
 
 	let sources: Array<Source> = this.room.find(FIND_SOURCES);
@@ -48,12 +48,12 @@ Creep.prototype.assignHarvestSource = function(noIncrement?: boolean): Source {
 	if (role == 'harvester') {
 		if (rMem.objects.lastAssigned === undefined) {
 			rMem.objects.lastAssigned = 0;
-			console.log('Creating \'lastAssigned\' memory object.')
+			console.log(room.link() + 'Creating \'lastAssigned\' memory object.')
 		}
 	} else if (role == 'remoteharvester') {
 		if (rMem.outposts.aggLastAssigned === undefined) {
 			rMem.outposts.aggLastAssigned = 0;
-			console.log('Creating \'aggLastAssigned\' memory object.');
+			console.log(room.link() + 'Creating \'aggLastAssigned\' memory object.');
 		}
 	}
 
@@ -88,7 +88,7 @@ Creep.prototype.assignHarvestSource = function(noIncrement?: boolean): Source {
 			rMem.outposts.aggLastAssigned = 0;
 	}
 
-	console.log(room.link() + ': Assigned harvester ' + this.name + ' to source #' + (LA + 1) + ' (ID: ' + assignedSource + ') in room ' + this.room.name);
+	console.log(room.link() + 'Assigned harvester ' + this.name + ' to source #' + (LA + 1) + ' (ID: ' + assignedSource + ') in room ' + assignedSource.room.name);
 
 	if (noIncrement) {
 		if (role == 'harvester') rMem.objects.lastAssigned = LA;
@@ -117,7 +117,7 @@ Creep.prototype.assignRemoteHarvestSource = function(noIncrement?: boolean): Sou
 
 	if (noIncrement) homeOutposts.aggLastAssigned = lastAss;
 
-	console.log(this.room.link() + ': Assigned remote harvester ' + this.name + ' to remote source #' + (nextAss + 1) + ' (ID: ' + assignedSource + ')');
+	console.log(this.room.link() + 'Assigned remote harvester ' + this.name + ' to remote source #' + (nextAss + 1) + ' (ID: ' + assignedSource + ')');
 
 	return assignedSource;
 }
@@ -151,7 +151,7 @@ Creep.prototype.unloadEnergy = function(): void {
 		if (!nearbyObj) {
 			if (this.drop(RESOURCE_ENERGY) === OK) {
 				this.say('🗑️');
-				console.log(this.name + ' dropped.');
+				console.log(this.room.link() + 'Harvester \'' + this.name + '\' dropped energy.');
 			}
 			return;
 		} else {
@@ -185,7 +185,7 @@ Creep.prototype.harvestEnergy = function(): void {
 					this.harvest(storedSource);
 				} else this.say('🚬');
 			} else this.harvest(storedSource);
-		} else this.moveTo(storedSource, { visualizePathStyle: { stroke: '#ffaa00', lineStyle: 'dashed', opacity: 0.5 }, ignoreCreeps: true } );
+		} else this.moveTo(storedSource, pathing.harvesterPathing);
 	}
 }
 
@@ -243,7 +243,7 @@ Creep.prototype.unloadMineral = function (): void {
 
 		if (nearbyObj.length == 0) {
 			if (this.drop(mineral[0]) === OK)
-				console.log(this.name + ' dropped ' + mineral + '.');
+				console.log(this.room.link() + 'Harvester \'' + this.name + '\' dropped ' + mineral + '.');
 			return;
 		} else {
 			const target = nearbyObj[0];
@@ -275,7 +275,7 @@ Creep.prototype.harvestMineral = function(): void {
 			}
 			this.harvest(storedMineral);
 		} else {
-			this.moveTo(storedMineral, { visualizePathStyle: { stroke: '#ff00ff' }, ignoreCreeps: true });
+			this.moveTo(storedMineral, pathing.minerPathing);
 		}
 	}
 }
@@ -298,12 +298,14 @@ Creep.prototype.recursivePathMove = function(serializedPath: string, stepNum: nu
 }
 
 Creep.prototype.disable = function(): true {
-	this.memory.disableAI = true;
+  this.memory.disableAI = true;
+  console.log(this.room.link() + 'Creep \'' + this.name + '\' is now disabled');
 	return this.memory.disableAI;
 }
 
 Creep.prototype.enable = function(): false {
-	this.memory.disableAI = false;
+  this.memory.disableAI = false;
+  console.log(this.room.link() + 'Creep \'' + this.name + '\' is now enabled.');
 	return this.memory.disableAI;
 }
 
@@ -316,7 +318,7 @@ Creep.prototype.getBoost = function (compound: MineralCompoundConstant, sourceLa
 				const result = sourceLab.boostCreep(this, numParts)
 				switch (result) {
 					case ERR_NOT_IN_RANGE:
-						this.moveTo(sourceLab, { visualizePathStyle: { stroke: '#ffffff', opacity: 0.5, lineStyle: 'solid' } });
+						this.moveTo(sourceLab, pathing.scientistPathing);
 						break;
 					case OK:
 						return true;
@@ -343,7 +345,7 @@ Creep.prototype.assignOutbox = function(noIncrement?: boolean): StructureContain
 
 	if (room.memory.settings.containerSettings.lastOutbox == undefined) {
 		room.memory.settings.containerSettings.lastOutbox = 0;
-		console.log('Creating \'lastOutbox\' memory setting.')
+		console.log(room.link() + 'Creating \'lastOutbox\' memory setting.')
 	}
 
 	let nextOutbox: number = room.memory.settings.containerSettings.lastOutbox + 1;
@@ -360,7 +362,7 @@ Creep.prototype.assignOutbox = function(noIncrement?: boolean): StructureContain
 	if (room.memory.settings.containerSettings.lastOutbox >= roomOutboxes.length)
 		room.memory.settings.containerSettings.lastOutbox = 0;
 
-	console.log('Assigned ' + this.memory.role + ' ' + this.name + ' to outbox ID ' + assignedOutbox)
+	console.log(room.link() + 'Assigned ' + this.memory.role + ' ' + this.name + ' to outbox ID ' + assignedOutbox)
 
 	if (noIncrement)
 		room.memory.settings.containerSettings.lastOutbox = LA;
@@ -384,7 +386,7 @@ Creep.prototype.assignInbox = function(noIncrement?: boolean): StructureContaine
 
 	if (room.memory.settings.containerSettings.lastInbox == undefined) {
 		room.memory.settings.containerSettings.lastInbox = 0;
-		console.log('Creating \'lastInbox\' memory setting.')
+		console.log(room.link() + 'Creating \'lastInbox\' memory setting.')
 	}
 
 	let nextInbox: number = room.memory.settings.containerSettings.lastInbox + 1;
@@ -401,7 +403,7 @@ Creep.prototype.assignInbox = function(noIncrement?: boolean): StructureContaine
 	if (room.memory.settings.containerSettings.lastInbox >= roomInboxes.length)
 		room.memory.settings.containerSettings.lastInbox = 0;
 
-	console.log(room.link() + ': Assigned ' + this.memory.role + ' ' + this.name + ' to inbox ID ' + assignedInbox)
+	console.log(room.link() + 'Assigned ' + this.memory.role + ' ' + this.name + ' to inbox ID ' + assignedInbox)
 
 	if (noIncrement)
 		room.memory.settings.containerSettings.lastInbox = LA;
@@ -426,54 +428,66 @@ Creep.prototype.assignLogisticalPair = function(logParam?: number): boolean {
 		this.memory.dropoff = chosenPair.destination;
 		this.memory.cargo = chosenPair.resource;
 		this.memory.pathLength = chosenPair.distance;
-		console.log(this.room.link() + ': Assigned pair (PICKUP: ' + chosenPair.source + ') | (DROPOFF: ' + chosenPair.destination + ') | (CARGO: ' + chosenPair.resource + ') | (LOCALITY: ' + chosenPair.locality + ')');
+		console.log(this.room.link() + 'Assigned pair (PICKUP: ' + chosenPair.source + ') | (DROPOFF: ' + chosenPair.destination + ') | (CARGO: ' + chosenPair.resource + ') | (LOCALITY: ' + chosenPair.locality + ')');
 		return true;
 	}
 }
 
 Creep.prototype.assignLogisticalPair = function(): boolean {
 
-	if (!this.room.memory.data)	this.room.initSettings();
-	if (this.room.memory.data.logisticalPairs === undefined) this.room.registerLogisticalPairs();
-	if (this.room.memory.data.pairCounter === undefined) this.room.memory.data.pairCounter = 0;
+  try {
+    if (!this.room.memory.data) this.room.initSettings();
+    if (this.room.memory.data.logisticalPairs === undefined) this.room.registerLogisticalPairs();
+    if (this.room.memory.data.pairCounter === undefined) this.room.memory.data.pairCounter = 0;
 
-	const assignedPair: LogisticsPair = this.room.memory.data.logisticalPairs[this.room.memory.data.pairCounter];
+    const assignedPair: LogisticsPair = this.room.memory.data.logisticalPairs[ this.room.memory.data.pairCounter ];
 
-	this.room.memory.data.pairCounter += 1;
+    this.room.memory.data.pairCounter += 1;
 
-	if (this.room.memory.data.pairCounter >= this.room.memory.data.logisticalPairs.length)
-		this.room.memory.data.pairCounter = 0;
+    if (this.room.memory.data.pairCounter >= this.room.memory.data.logisticalPairs.length)
+      this.room.memory.data.pairCounter = 0;
 
-	if (this.room.memory.data.logisticalPairs.length == 0) {
-		console.log(this.room.link() + 'No pairs available to assign. Set \'none\'.');
-		return false;
-	} else if (!assignedPair) {
-		console.log('No pairs to assign.');
-		return false;
-	}
-	else if (assignedPair) {
-		this.memory.pickup = assignedPair.source;
-		this.memory.dropoff = assignedPair.destination;
-		this.memory.cargo = assignedPair.resource;
-		this.memory.pathLength = assignedPair.distance;
-		console.log(this.room.link() + ': Assigned pair (PICKUP: ' + assignedPair.source + ') | (DROPOFF: ' + assignedPair.destination + ') | (CARGO: ' + assignedPair.resource + ') | (LOCALITY: ' + assignedPair.locality + ')');
-		return true;
-	} else {
-		console.log(this.room.link() + ': Unable to assign pair for creep \'' + this.name + '\'.');
-		return false;
-	}
+    if (this.room.memory.data.logisticalPairs.length == 0) {
+      console.log(this.room.link() + 'No pairs available to assign. Set \'none\'.');
+      return false;
+    } else if (!assignedPair) {
+      console.log(this.room.link() + 'No pairs to assign.');
+      return false;
+    }
+    else if (assignedPair) {
+      this.memory.pickup = assignedPair.source;
+      this.memory.dropoff = assignedPair.destination;
+      this.memory.cargo = assignedPair.resource;
+      this.memory.pathLength = assignedPair.distance;
+      this.memory.locality = assignedPair.locality;
+
+      console.log(this.room.link() + 'Assigned pair (PICKUP: ' + assignedPair.source + ') | (DROPOFF: ' + assignedPair.destination + ') | (CARGO: ' + assignedPair.resource + ') | (LOCALITY: ' + assignedPair.locality + ')');
+      return true;
+    } else {
+      console.log(this.room.link() + 'Unable to assign pair for creep \'' + this.name + '\'.');
+      return false;
+    }
+  } catch (e: any) {
+    console.log(e);
+    console.log(e.stack);
+  }
 }
 
 
 Creep.prototype.navigateWaypoints = function (waypoints: string | string[]): void {
 	if (waypoints instanceof Array !== true) {
-		console.log('The passed parameter was not an array. Pass an array containing the list of waypoints (flag names) sorted in navigation order.');
+    console.log(this.room.link() + 'The passed parameter was not an array. Pass an array containing the list of waypoints (flag names) sorted in navigation order.');
 		return;
 	}
 	else {
 		if (!validateFlagName(waypoints)) {
-			console.log('Input waypoints contained an invalid room name');
+			console.log(this.room.link() + 'Input waypoints contained an invalid room name');
 			return;
 		}
 	}
+}
+
+Creep.prototype.targetPile = function (pileID: Id<Resource>): void {
+  this.memory.targetPile = pileID;
+  return;
 }
