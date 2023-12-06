@@ -5,19 +5,60 @@ export function roomDefense(room: Room) {
 
 	_.forEach(towers, function (tower: StructureTower) {
 		if (tower) {
+      const topLeft = new RoomPosition(tower.pos.x - 5, tower.pos.y - 5, room.name);
 
-      Game.map.visual.rect(
-        new RoomPosition(tower.pos.x - 5, tower.pos.y - 5, tower.pos.roomName),
-        11, 11, { fill: 'transparent', stroke: '#ff0000' });
+      const tID: Id<StructureTower> = tower.id;
+      const hostilesInRoom: Creep[] = tower.room.find(FIND_HOSTILE_CREEPS, { filter: (i) => ((i.pos.x <= 5 && i.pos.y >= 4) || (i.pos.x >= 4 && i.pos.y <= 5)) && i.owner.username !== 'Invader' });
 
-			const tID: Id<StructureTower> = tower.id;
-			const closestHostile: Creep = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+			//const closestHostile: Creep = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+      if (hostilesInRoom.length) {
 
-			if (closestHostile) {
-				tower.room.visual.circle(tower.pos, { fill: '#110000', radius: 35, stroke: '#ff0000', opacity: 0.3, lineStyle: 'dashed' });
-				tower.attack(closestHostile);
-			} else {
-				const closestDamagedCreep: Creep = tower.pos.findClosestByRange(FIND_MY_CREEPS, { filter: (creep) => creep.hits < creep.hitsMax });
+        console.log(tower.room.link() + 'Owner Name: ' + hostilesInRoom[0].owner.username + ' | ' + hostilesInRoom);
+        Game.map.visual.rect(topLeft, 11, 11, { fill: 'transparent', stroke: '#ff0000' });
+
+        const attackHostiles = hostilesInRoom.filter(
+          (creep) => {
+            if (creep.getActiveBodyparts(ATTACK) > 0 || creep.getActiveBodyparts(RANGED_ATTACK) > 0 || creep.getActiveBodyparts(WORK) > 0) return creep;
+          });
+
+        const healHostiles = hostilesInRoom.filter(
+          (creep) => {
+            if (creep.getActiveBodyparts(HEAL) > 0) return creep;
+          });
+
+        if (healHostiles.length) {
+
+          console.log(tower.room.link() + 'Healer Hostiles: ' + healHostiles);
+          const closestHealer = tower.pos.findClosestByRange(healHostiles);
+
+          if (closestHealer)
+            tower.attack(closestHealer);
+
+        } else if (attackHostiles.length) {
+
+          console.log(tower.room.link() + 'Attack Hostiles: ' + attackHostiles);
+          const closestAttacker = tower.pos.findClosestByRange(attackHostiles);
+
+          if (closestAttacker)
+            tower.attack(closestAttacker);
+        }
+      } else {
+
+        const invaderHostiles = tower.room.find(FIND_HOSTILE_CREEPS, { filter: (i) => i.owner.username === 'Invader' });
+
+
+        if (invaderHostiles.length) {
+
+          console.log(invaderHostiles[ 0 ].owner.username + ' | ' + invaderHostiles);
+          Game.map.visual.rect(topLeft, 11, 11, { fill: 'transparent', stroke: '#ff0000' });
+
+          const closestInvader = tower.pos.findClosestByRange(invaderHostiles);
+
+          if (closestInvader)
+            tower.attack(closestInvader)
+
+        } else {
+          const closestDamagedCreep: Creep = tower.pos.findClosestByRange(FIND_MY_CREEPS, { filter: (creep) => creep.hits < creep.hitsMax });
 
 				if (closestDamagedCreep) {
 					tower.heal(closestDamagedCreep);
@@ -44,25 +85,22 @@ export function roomDefense(room: Room) {
 
 							if (tower.room.memory.settings.flags.towerRepairDefenses) {
 								if (tower.room.memory.settings.flags.repairRamparts) {
-									ramparts = tower.room.find(FIND_STRUCTURES, { filter: (i) => ((i.hits / i.hitsMax * 100) < rampartsMax) && (i.structureType == STRUCTURE_RAMPART) });
+									ramparts = tower.room.find(FIND_STRUCTURES, { filter: (i) => ((i.hits <= rampartsMax) && (i.structureType == STRUCTURE_RAMPART)) });
 									validTargets = validTargets.concat(ramparts);
 								}
-
 								if (tower.room.memory.settings.flags.repairWalls) {
-									walls = tower.room.find(FIND_STRUCTURES, { filter: (i) => (i.structureType == STRUCTURE_WALL && (i.hits / i.hitsMax * 100) < wallsMax) })
+									walls = tower.room.find(FIND_STRUCTURES, { filter: (i) => (i.structureType == STRUCTURE_WALL && (i.hits  <= wallsMax)) })
 									validTargets = validTargets.concat(walls);
 								}
 							}
-
 							const target: AnyStructure = tower.pos.findClosestByRange(validTargets);
 							if (target) {
-								tower.room.memory.data.towerLRT = validTargets[0].id;
 								tower.repair(validTargets[0]);
 							}
 						}
 					}
 				}
-			}
-		//}
+      }
+    }
 	});
 }
