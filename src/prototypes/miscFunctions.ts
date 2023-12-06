@@ -361,7 +361,7 @@ export function calcLabReaction(baseReg1: MineralCompoundConstant | MineralConst
   return outputChem;
 }
 
-export function createRoomFlag(room: string) { // creates a flag named after room at room's center, or at controller if present
+export function createRoomFlag(room: string): string | null { // creates a flag named after room at room's center, or at controller if present
 
   let flagX: number;
   let flagY: number;
@@ -377,13 +377,13 @@ export function createRoomFlag(room: string) { // creates a flag named after roo
   const flag = Game.rooms[room].createFlag(flagX, flagY, Game.rooms[room].name, randomColor(), randomColor());
   switch (flag) {
     default:
-      console.log('Flag succesfully created.');
-      return flag;
+      console.log(Game.rooms[room].link() + ' Flag succesfully created.');
+      return Game.rooms[room].name;
     case ERR_NAME_EXISTS:
-      console.log('Error: Name exists.');
+      console.log(Game.rooms[room].link() + ' Error: A flag with that name already exists.');
       return null;
     case ERR_INVALID_ARGS:
-      console.log('Error: The location or the name is incorrect.');
+      console.log(Game.rooms[room].link() + ' Error: The location or the name is incorrect.');
       return null;
   }
 }
@@ -619,4 +619,146 @@ export function entries<K extends string, V extends {}>(obj: Partial<Record<K, V
 
 export function keys<K extends string>(obj: Record<K, any>): K[] {
   return Object.keys(obj) as K[];
+}
+
+export function buildProgress(cSite: ConstructionSite, room: Room): void {
+  const progPercent: number = parseInt(((cSite.progress / cSite.progressTotal) * 100).toFixed(1));
+        let boxWidth: number = 1.2;
+        let boxX: number = .6;
+        let progColor: string;
+        let boxColor: string;
+        if (progPercent >= 90) {
+          progColor = '#00ff00';
+          boxColor = '#00aa00';
+        }
+        else if (progPercent >= 80) {
+          progColor = '#008800';
+          boxColor = '#005500';
+        }
+        else if (progPercent >= 70) {
+          progColor = '#004400';
+          boxColor = '#002200';
+        }
+        else if (progPercent >= 60) {
+          progColor = '#ffff00';
+          boxColor = '#aaaa00';
+        }
+        else if (progPercent >= 50) {
+          progColor = '#aaaa00';
+          boxColor = '#888800';
+        }
+        else if (progPercent >= 40) {
+          progColor = '#999900';
+          boxColor = '#555500';
+        }
+        else if (progPercent >= 30) {
+          progColor = '#ff8800';
+          boxColor = '#aa5500';
+        }
+        else if (progPercent >= 20) {
+          progColor = '#ff5500';
+          boxColor = '#884400';
+        }
+        else if (progPercent >= 10) {
+          progColor = '#aa2200';
+          boxColor = '#882200';
+        }
+        else if (progPercent < 10 && progPercent > 0) {
+          progColor = '#ff0000';
+          boxColor = '#880000';
+          boxWidth = .95;
+          boxX = .475
+        }
+        room.visual.rect(cSite.pos.x - boxX, cSite.pos.y + .65, boxWidth, .5, { fill: boxColor, opacity: 0.5, stroke: progColor, strokeWidth: 0.05, lineStyle: 'solid' });
+        room.visual.rect(cSite.pos.x - boxX + 0.05, cSite.pos.y + .68, boxWidth - .1, .43, { fill: 'transparent', opacity: 0.8, stroke: '#000000', strokeWidth: 0.025, lineStyle: 'solid' });
+        room.visual.text(((cSite.progress / cSite.progressTotal) * 100).toFixed(1) + '%', cSite.pos.x, cSite.pos.y + 1.025, { stroke: '#000000', strokeWidth: 0.055, color: progColor, font: 0.35 })
+}
+
+export function repairProgress(building: AnyStructure, room: Room): void {
+  const repPercent: number = parseInt(((building.hits / building.hitsMax) * 100).toFixed(1));
+  let boxWidth: number = 1.2;
+  let boxX: number = .6;
+  let repColor: string;
+  let boxColor: string;
+  if (repPercent >= 90) {
+    repColor = '#00ff00';
+    boxColor = '#00aa00';
+  }
+  else if (repPercent >= 80) {
+    repColor = '#008800';
+    boxColor = '#005500';
+  }
+  else if (repPercent >= 70) {
+    repColor = '#004400';
+    boxColor = '#002200';
+  }
+  else if (repPercent >= 60) {
+    repColor = '#ffff00';
+    boxColor = '#aaaa00';
+  }
+  else if (repPercent >= 50) {
+    repColor = '#aaaa00';
+    boxColor = '#888800';
+  }
+  else if (repPercent >= 40) {
+    repColor = '#999900';
+    boxColor = '#555500';
+  }
+  else if (repPercent >= 30) {
+    repColor = '#ff8800';
+    boxColor = '#aa5500';
+  }
+  else if (repPercent >= 20) {
+    repColor = '#ff5500';
+    boxColor = '#884400';
+  }
+  else if (repPercent >= 10) {
+    repColor = '#aa2200';
+    boxColor = '#882200';
+  }
+  else if (repPercent < 10) {
+    repColor = '#ff0000';
+    boxColor = '#880000';
+    boxWidth = .95;
+    boxX = .475
+  }
+
+  room.visual.rect(building.pos.x - boxX, building.pos.y + .65, boxWidth, .5, { fill: boxColor, opacity: 0.5, stroke: repColor, strokeWidth: 0.05, lineStyle: 'solid' });
+
+  room.visual.text(repPercent + '%', building.pos.x, building.pos.y + 1.025, { stroke: boxColor, strokeWidth: 0.025, color: repColor, font: 0.35 });
+}
+
+export function returnCode(rCode: ScreepsReturnCode): string {
+  switch (rCode) {
+    case 0:
+      return 'OK';
+    case -1:
+      return 'ERR_NOT_OWNER';
+    case -2:
+      return 'ERR_NO_PATH';
+    case -3:
+      return 'ERR_NAME_EXISTS';
+    case -4:
+      return 'ERR_BUSY';
+    case -5:
+      return 'ERR_NOT_FOUND';
+    case -6:
+      return 'ERR_NOT_ENOUGH_RESOURCES';
+    case -7:
+      return 'ERR_INVALID_TARGET';
+    case -8:
+      return 'ERR_FULL';
+    case -9:
+      return 'ERR_NOT_IN_RANGE';
+    case -10:
+      return 'ERR_INVALID_ARGS';
+    case -11:
+      return 'ERR_TIRED';
+    case -12:
+      return 'ERR_NO_BODYPART';
+    case -14:
+      return 'ERR_RCL_NOT_ENOUGH';
+    case -15:
+      return 'ERR_GCL_NOT_ENOUGH';
+  }
 }
