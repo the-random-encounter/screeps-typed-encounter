@@ -1698,7 +1698,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
       //: CONSOLE-BASED CREEP CENSUS VS TARGETS & ENERGY CAPACITY
       const tickInterval: number = Memory.globalSettings.consoleSpawnInterval;
-
+      let storageInfo = '';
+      if (room.storage) storageInfo = '<' + room.storage.store[ RESOURCE_ENERGY ].toString() + '> ';
       const energy:  string = 'NRG: ' + room.energyAvailable + '/' + room.energyCapacityAvailable + '(' + (room.energyAvailable / room.energyCapacityAvailable * 100).toFixed(0) + '%) ';
       const hInfo:   string = (harvesterTarget)       ? '| H:'   + harvesters.length       + '(' + harvesterTarget       + ') ' : '';
       const cInfo:   string = (collectorTarget)       ? '| C:'   + collectors.length       + '(' + collectorTarget       + ') ' : '';
@@ -1718,7 +1719,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       const rgInfo:  string = (remoteGuardTarget)     ? '| RG:'  + remoteGuards.length     + '(' + remoteGuardTarget     + ')' : '';
 
       if (tickInterval !== 0 && tickCount % tickInterval === 0) {
-        console.log(room.link() + energy + hInfo + cInfo + rInfo + bInfo + uInfo + rpInfo + cnInfo + rtInfo + rvInfo + rngInfo + warInfo + hlrInfo + rhInfo + rrInfo + rbInfo + rgInfo + ' Tick: ' + tickCount);
+        console.log(room.link() + energy + storageInfo + hInfo + cInfo + rInfo + bInfo + uInfo + rpInfo + cnInfo + rtInfo + rvInfo + rngInfo + warInfo + hlrInfo + rhInfo + rrInfo + rbInfo + rgInfo + ' Tick: ' + tickCount);
       }
 
       //: ROOM VISUALS - SPAWN INFO BOXES
