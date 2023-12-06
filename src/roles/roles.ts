@@ -1772,6 +1772,10 @@ export const roleReserver = {
       if (Memory.miscData.outpostCounter >= Game.rooms[cMem.homeRoom].memory.outposts.roomList.length)
         Memory.miscData.outpostCounter = 0;
     }
+    if (rMem.data.controllerAttack) {
+      if (cMem.controllerAttack === undefined)
+        cMem.controllerAttack = rMem.data.controllerAttack;
+    }
 
     if (!cMem.disableAI) {
 
@@ -1782,19 +1786,49 @@ export const roleReserver = {
         else if (pos.y == 49) creep.move(TOP    );
         else if (pos.y == 0 ) creep.move(BOTTOM );
 
-        if (room.name == cMem.targetRoom) {
-          if (!rMem.objects) room.cacheObjects();
-          if (Game.rooms[room.name].controller.owner === undefined) {
-            if (creep.reserveController(room.controller) == ERR_NOT_IN_RANGE) creep.moveTo(room.controller, pathing.reserverPathing);
-          } else if (typeof Game.rooms[room.name].controller.owner === 'object') {
-            if (Game.rooms[room.name].controller.owner.username !== 'randomencounter') {
-              if (creep.attackController(room.controller) == ERR_NOT_IN_RANGE) creep.moveTo(room.controller, pathing.reserverPathing);
+        if (cMem.controllerAttack) {
+          if (room.name === cMem.controllerAttack) {
+            const result = creep.attackController(room.controller);
+            switch (result) {
+              case OK:
+                if (room.controller.upgradeBlocked) {
+                  if (!room.controller.sign || room.controller.sign.username !== 'randomencounter' || room.controller.sign.text !== 'There\'s no place like 127.0.0.1!')
+                    creep.signController(room.controller, 'There\'s no place like 127.0.0.1!');
+                  delete cMem.controllerAttack;
+                  break;
+                }
+              case ERR_NOT_IN_RANGE:
+                creep.moveTo(room.controller, pathing.reserverPathing);
+                break;
+              case ERR_TIRED:
+                if (room.controller.upgradeBlocked) {
+                  delete cMem.controllerAttack;
+                  break;
+                }
+              default:
+                break;
             }
+          } else {
+            creep.moveTo(Game.flags[ cMem.controllerAttack ], pathing.reserverPathing);
           }
-          if (!room.controller.sign)
-            creep.signController(room.controller, 'There\'s no place like 127.0.0.1');
         } else {
-          if (Game.flags[cMem.targetRoom]) creep.moveTo(Game.flags[cMem.targetRoom], pathing.reserverPathing);
+          if (room.name == cMem.targetRoom) {
+            if (!rMem.objects) room.cacheObjects();
+            if (Game.rooms[ room.name ].controller.owner === undefined) {
+              if (creep.reserveController(room.controller) == ERR_NOT_IN_RANGE)
+                creep.moveTo(room.controller, pathing.reserverPathing);
+            } else if (typeof Game.rooms[ room.name ].controller.owner === 'object') {
+              if (Game.rooms[ room.name ].controller.owner.username !== 'randomencounter') {
+                if (creep.attackController(room.controller) == ERR_NOT_IN_RANGE)
+                  creep.moveTo(room.controller, pathing.reserverPathing);
+              }
+            }
+            if (!room.controller.sign)
+              creep.signController(room.controller, 'There\'s no place like 127.0.0.1!');
+          } else {
+            if (Game.flags[ cMem.targetRoom ])
+              creep.moveTo(Game.flags[ cMem.targetRoom ], pathing.reserverPathing);
+          }
         }
       } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
