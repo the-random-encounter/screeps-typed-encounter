@@ -705,6 +705,7 @@ declare global {
     combatObjectives?:    CombatObjective;
     towerLRT?:            Id<AnyStructure>;
     attackSignal?:        boolean;
+    controllerAttack?:    Id<StructureController>;
   }
   interface CombatObjective {
     targetRoom?:          RoomName;
