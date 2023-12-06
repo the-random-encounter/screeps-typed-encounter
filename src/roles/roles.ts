@@ -1786,7 +1786,7 @@ export const roleReserver = {
         else if (pos.y == 49) creep.move(TOP    );
         else if (pos.y == 0 ) creep.move(BOTTOM );
 
-        if (cMem.controllerAttack) {
+        if (cMem.controllerAttack !== undefined && cMem.controllerAttack === true) {
           if (room.name === cMem.controllerAttack) {
             const result = creep.attackController(room.controller);
             switch (result) {
@@ -1823,7 +1823,7 @@ export const roleReserver = {
                   creep.moveTo(room.controller, pathing.reserverPathing);
               }
             }
-            if (!room.controller.sign)
+            if (!room.controller.sign || room.controller.sign.username !== 'randomencounter' || room.controller.sign.text !== 'There\'s no place like 127.0.0.1!')
               creep.signController(room.controller, 'There\'s no place like 127.0.0.1!');
           } else {
             if (Game.flags[ cMem.targetRoom ])
@@ -2205,38 +2205,52 @@ export const roleWarrior = {
         else if (pos.y == 49) creep.move(TOP    );
         else if (pos.y == 0 ) creep.move(BOTTOM );
 
-        if (Memory.rooms[cMem.homeRoom].data.attackSignal == true) {
-
-          if (cMem.customTarget) {
-            const cAT: AnyStructure = Game.getObjectById(cMem.customTarget)
-              if (creep.dismantle(cAT) == ERR_NOT_IN_RANGE || creep.attack(cAT) == ERR_NOT_IN_RANGE)
-                creep.moveTo(cAT, pathing.warriorPathing);
+        if (cMem.customTarget) {
+          const cAT: AnyStructure = Game.getObjectById(cMem.customTarget)
+            if (creep.dismantle(cAT) == ERR_NOT_IN_RANGE || creep.attack(cAT) == ERR_NOT_IN_RANGE)
+              creep.moveTo(cAT, pathing.warriorPathing);
+        } else {
+          if (room.name !== cMem.attackRoom) {
+            creep.moveTo(Game.flags[cMem.attackRoom], pathing.warriorPathing);
           } else {
-            if (room.name !== cMem.attackRoom) {
-              creep.moveTo(Game.flags[cMem.attackRoom], pathing.warriorPathing);
-            } else {
-              const hostiles = room.find(FIND_HOSTILE_CREEPS);
-              const target = pos.findClosestByRange(hostiles);
+              const towers = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
+              const target = pos.findClosestByRange(towers);
 
-              if (target) {
-                if (creep.attack(target) == ERR_NOT_IN_RANGE)
+            if (target) {
+              if (creep.getActiveBodyparts(WORK) > 0) {
+                if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
                   creep.moveTo(target, pathing.warriorPathing);
               } else {
-                const towers = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
-                const target = pos.findClosestByRange(towers);
+                if (creep.attack(target) == ERR_NOT_IN_RANGE)
+                  creep.moveTo(target, pathing.warriorPathing);
+              }
+            } else {
+              const spawns = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_SPAWN } });
+              const target = pos.findClosestByRange(spawns);
+
+              if (target) {
+                const nearbyCreeps = pos.findInRange(FIND_HOSTILE_CREEPS, 1);
+                if (nearbyCreeps.length) {
+                  if (pos.isNearTo(nearbyCreeps[0]))
+                    creep.attack(nearbyCreeps[ 0 ]);
+                }
+                if (creep.getActiveBodyparts(WORK) > 0) {
+                  if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
+                    creep.moveTo(target, pathing.warriorPathing);
+                } else {
+                  if (creep.attack(target) == ERR_NOT_IN_RANGE)
+                    creep.moveTo(target, pathing.warriorPathing);
+                }
+              } else {
+                const hostiles = room.find(FIND_HOSTILE_CREEPS);
+                const target = pos.findClosestByRange(hostiles);
 
                 if (target) {
-                  if (creep.getActiveBodyparts(WORK) > 0) {
-                    if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
-                      creep.moveTo(target, pathing.warriorPathing);
-                  } else {
-                    if (creep.attack(target) == ERR_NOT_IN_RANGE)
-                      creep.moveTo(target, pathing.warriorPathing);
-                  }
+                  if (creep.attack(target) == ERR_NOT_IN_RANGE)
+                    creep.moveTo(target, pathing.warriorPathing);
                 } else {
-                  const spawns = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_SPAWN } });
-                  const target = pos.findClosestByRange(spawns);
-
+                  const structures = room.find(FIND_HOSTILE_STRUCTURES);
+                  const target = pos.findClosestByRange(structures);
                   if (target) {
                     if (creep.getActiveBodyparts(WORK) > 0) {
                       if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
@@ -2245,23 +2259,11 @@ export const roleWarrior = {
                       if (creep.attack(target) == ERR_NOT_IN_RANGE)
                         creep.moveTo(target, pathing.warriorPathing);
                     }
-                  } else {
-                    const structures = room.find(FIND_HOSTILE_STRUCTURES);
-                    const target = pos.findClosestByRange(structures);
-                    if (target) {
-                      if (creep.getActiveBodyparts(WORK) > 0) {
-                        if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
-                          creep.moveTo(target, pathing.warriorPathing);
-                      } else {
-                        if (creep.attack(target) == ERR_NOT_IN_RANGE)
-                          creep.moveTo(target, pathing.warriorPathing);
-                      }
-                    } else if (creep.getActiveBodyparts(CLAIM) > 0) {
-                      const controller = room.controller;
+                  } else if (creep.getActiveBodyparts(CLAIM) > 0) {
+                    const controller = room.controller;
 
-                      if (creep.attackController(controller) == ERR_NOT_IN_RANGE)
-                        creep.moveTo(controller, pathing.warriorPathing);
-                    }
+                    if (creep.attackController(controller) == ERR_NOT_IN_RANGE)
+                      creep.moveTo(controller, pathing.warriorPathing);
                   }
                 }
               }
@@ -2413,7 +2415,8 @@ function navRallyPoint(creep: Creep): void {
 
   if (cMem.rallyPoint instanceof Array) {
     if (cMem.rallyPoint.length == 1 && pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) cMem.rallyPoint = 'none';
-    else if (!pos.isNearTo(Game.flags[cMem.rallyPoint[0]])) creep.moveTo(Game.flags[cMem.rallyPoint[0]], pathing.rallyPointPathing);
+    else if (!pos.isNearTo(Game.flags[ cMem.rallyPoint[ 0 ] ]))
+      creep.moveTo(Game.flags[ cMem.rallyPoint[ 0 ] ], pathing.rallyPointPathing);
     else {
       if (cMem.rallyPoint.length > 1)
         creep.moveTo(Game.flags[cMem.rallyPoint[1]], pathing.rallyPointPathing);
