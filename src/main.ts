@@ -3,15 +3,16 @@ import { roleHarvester, roleUpgrader, roleBuilder, roleCollector, roleRepairer, 
 
 // PURPOSE import other modules
 import { roomDefense } from "./roomDefense";
-import { calcTickTime, visualRCProgress } from 'prototypes/miscFunctions';
+import { calcTickTime, visualRCProgress, buildProgress } from 'prototypes/miscFunctions';
 import { ErrorMapper } from "utils/ErrorMapper";
+import { MemHack } from "utils/MemHack";
 
 // PURPOSE import prototype modules
 import 'prototypes/creepFunctions';
 import 'prototypes/roomFunctions';
 import 'prototypes/roomPositionFunctions';
 import 'prototypes/spawnFunctions';
-import { Reserver } from '../host/room/creeps/creepClasses';
+
 
 // PURPOSE define pre-configured creep bodypart arrays as key/value pairs in an object
 const spawnVariants: {[key: string]: Array<BodyPartConstant>} = {
@@ -133,12 +134,109 @@ if (Memory.miscData === undefined)
     }
   };
 
-if (Memory.globalSettings === undefined)
-  Memory.globalSettings = {
+if (Memory.globalSettings === undefined || Memory.globalSettings.creepSettings === undefined) {
+  const globalSettings: GlobalSettings = {
     consoleSpawnInterval: 25,
-    alertDisabled:        true,
-    reusePathValue:       5
+    alertDisabled: true,
+    reusePathValue: 5,
+    ignoreCreeps: true,
+    creepSettings: {
+      builder: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      claimer: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      collector: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      crane: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      harvester: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      healer: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      invader: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      miner: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      provider: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      ranger: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      rebooter: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remotebuilder: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remoteguard: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remoteharvester: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remotelogistician: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remoterunner: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      repairer: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      reserver: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      runner: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      scientist: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      scout: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      upgrader: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      warrior: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      }
+    }
   };
+  Memory.globalSettings = globalSettings;
+}
 
 if (Memory.colonies === undefined) {
   const colonies: Colonies = { colonyList: [], registry: {} };
@@ -177,6 +275,7 @@ declare global {
     'scout'             |
     'upgrader'          |
     'warrior'
+
 
   type RoomObjectName =
     'terrainCM'         |
@@ -286,6 +385,7 @@ declare global {
     assignLogisticalPair(logParam?: number):          boolean;
     assignLogisticalPair():                           boolean;
     navigateWaypoints(waypoints: string | string[]):  void;
+    targetPile(pileID: Id<Resource>):                 void;
   }
   interface Room { // * ADDITIONAL ROOM OBJECT FUNCTIONS
     clearPPT  ():                                   void;
@@ -373,7 +473,7 @@ declare global {
       posArray: number[],
       roomName: RoomName | false):    void;
     registerOutpost(
-      roomName: string | number):     void;
+      roomName: string | number):     boolean;
     registerOutpostContainers(
       outpostName: string):           void;
     calcOutpostPotential():           void;
@@ -405,7 +505,17 @@ declare global {
   }
   interface StructureSpawn { // * ADDITIONAL SPAWN STRUCTURE OBJECT FUNCTIONS
     spawnDismantler(
-      maxEnergy: number | false ):   void;
+      maxEnergy: number | false):    void;
+    spawnHealer(
+      creepName: string,
+      targetRoom: RoomName,
+      waypoints: string | string[] | 'none',
+      maxEnergy: number | false):    ScreepsReturnCode;
+    spawnBeef(
+      creepName: string,
+      targetRoom: RoomName,
+      waypoints: string | string[] | 'none',
+      maxEnergy: number | false):    ScreepsReturnCode;
     spawnWarrior(
       creepName: string,
       targetRoom: RoomName,
@@ -422,15 +532,19 @@ declare global {
   }
 
   // * INTERFACES FOR TOP LEVEL MEMORY OBJECTS (MEMORY, ROOM_MEMORY, CREEP_MEMORY)
+
+  interface RawMemory {
+    _parsed: any;
+  }
   interface Memory {
-    miscData?:    MiscData;
-    constructed?: true | undefined;
-    roomVisuals?: boolean;
-    mapVisuals?:  boolean;
-    cpuLogging?:  boolean;
-    ID?:          number;
-    colonies?:    Colonies;
-    stats?:       Partial<Stats>;
+    miscData?:          MiscData;
+    constructed?:       true | undefined;
+    roomVisuals?:       boolean;
+    mapVisuals?:        boolean;
+    cpuLogging?:        boolean;
+    ID?:                number;
+    colonies?:          Colonies;
+    stats?:             Partial<Stats>;
     claimRequests?:     { [key: string]: { needs: number[], score: number } };
     attackRequests?:    { [key: string]: { needs: number[] } };
     constructionSites?: { [key: string]: number };
@@ -445,23 +559,24 @@ declare global {
     working?:       boolean;
     rallyPoint?:    string | string[] | 'none';
     disableAI?:     boolean;
-    pickup?: Id<StructureContainer | StructureStorage | StructureLink>;
-    dropoff?: Id<StructureContainer | StructureStorage | StructureLink>;
-    bucket?: Id<StructureContainer | StructureStorage | StructureLink>;
+    pickup?:        Id<StructureContainer | StructureStorage | StructureLink>;
+    dropoff?:       Id<StructureContainer | StructureStorage | StructureLink>;
+    bucket?:        Id<StructureContainer | StructureStorage | StructureLink>;
     source?:        Id<Source>;
     mineral?:       Id<Mineral>;
     cargo?:         ResourceConstant;
     invaderLooter?: boolean;
-    [key: string]: any;
-    link?: Id<StructureLink>;
-    atCraneSpot?: boolean;
-    upgrading?: boolean;
-    dropLink?: boolean;
+    [key: string]:  any;
+    link?:          Id<StructureLink>;
+    atCraneSpot?:   boolean;
+    upgrading?:     boolean;
+    dropLink?:      boolean;
     storage?:       Id<StructureStorage>;
     terminal?:      Id<StructureTerminal>;
     destination?:   Id<StructureLink>;
     xferDest?:      boolean;
     customTarget?:  Id<AnyStructure>;
+    savedPile?:     Id<Resource>;
   }
   interface RoomMemory {
     targets:        { [key: string]: number };
@@ -491,6 +606,18 @@ declare global {
     [key: string]: any;
     rooms: { [key: string]: any };
   }
+  interface GlobalSettings {
+    consoleSpawnInterval: number;
+    alertDisabled:        boolean;
+    reusePathValue:       number;
+    ignoreCreeps:         boolean,
+    creepSettings: {
+        [key: string]: {
+        reusePathValue:   number;
+        ignoreCreeps:     boolean;
+      }
+    };
+  }
 
   // * INTERFACES FOR ROOM_MEMORY.SETTINGS OBJECT & SUBOBJECTS
   interface RoomSettings {
@@ -515,6 +642,7 @@ declare global {
     centralStorageLogic?:   boolean;
     closestConSites?:       boolean;
     craneUpgrades?:         boolean;
+    displayTowerRanges?:    boolean;
     harvestersFixAdjacent?: boolean;
     runnersDoMinerals?:     boolean;
     runnersDoPiles?:        boolean;
@@ -537,6 +665,7 @@ declare global {
     roomFlags?:     RoomFlagsSettings;
     progressInfo?:  ProgressInfoSettings;
     displayControllerUpgradeRange?: boolean;
+    displayTowerRanges?:            boolean;
   }
   interface SpawnInfoSettings {
     alignment?: alignment;
@@ -823,7 +952,7 @@ declare global {
       visualRCProgress(controllerID: StructureController): void;
       GOBI(ID: Id<AnyCreep | AnyStructure | ConstructionSite | Resource | Tombstone>): AnyCreep | AnyStructure | ConstructionSite | Resource | Tombstone;
       MC(name: string, dir: DirectionConstant): CreepMoveReturnCode;
-      createRoomFlag(room: string): Flag | null;
+      createRoomFlag(room: string): string | null;
       validateRoomName(roomName: string): roomName is RoomName;
       entries<K extends string, V extends {}>(obj: Partial<Record<K, V>>): [K, V][];
       keys<K extends string>(obj: Record<K, unknown>): K[];
@@ -841,6 +970,8 @@ declare global {
 export const loop = ErrorMapper.wrapLoop(() => {
   //: This is code to run in the main loop, just once each tick, separate from any room loops
 
+  MemHack.pretick();
+
   if (typeof Memory.colonies === undefined) Memory.colonies = {};
   if (typeof Memory.colonies.colonyList === undefined) Memory.colonies.colonyList = [];
   if (Memory.globalSettings === undefined) {
@@ -854,7 +985,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
   if (Game.shard.name === 'shard3') {
     if (Game.cpu.bucket == 10000) {
       Game.cpu.generatePixel()
-      console.log('CPU Bucket at limit, generating pixel...');
+      console.log('[GENERAL]: CPU Bucket at limit, generating pixel...');
     }
   }
 
@@ -863,7 +994,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     if (!Game.creeps[name]) {
       const role: CreepRoles = Memory.creeps[name].role;
       delete Memory.creeps[name];
-      console.log('Clearing nonexistent creep memory: ', name);
+      console.log('[GENERAL]: Clearing nonexistent creep memory: ', name);
       // reset naming counter for type of creep that died
       switch (role) {
         case 'builder':
@@ -945,7 +1076,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
     const rMem = room.memory;
 
     if (!rMem.objects) {
-      console.log('[' + room.name + ']: No room objects in memory. Caching.')
+      console.log(room.link() + 'No room objects in memory. Caching.')
       room.cacheObjects();
     }
 
@@ -964,6 +1095,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     if (numCSites < numCSitesPrevious) room.cacheObjects();
 
+    _.forEach(cSites, function (cSite: ConstructionSite) {
+      if (cSite.progress > 0) buildProgress(cSite, room);
+    });
+
     //: code to run if room contains a controller owned by us
     if (room && room.controller && room.controller.my) {
 
@@ -974,7 +1109,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       const colonies: Colonies     = Memory.colonies;
 
       if (tickCount > 0 && tickCount % 1000 == 0) {
-        console.log('MAIN LOOP, CACHING OBJECTS EVERY 1000 TICKS --- Tick#: ' + tickCount);
+        console.log(room.link() + 'MAIN LOOP, CACHING OBJECTS EVERY 1000 TICKS --- Tick#: ' + tickCount);
         room.cacheObjects();
         tickCount = 0;
       }
@@ -1130,7 +1265,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
             for (let i = 0; i < collectors.length; i++) {
               if (collectors[i].ticksToLive > 300) {
                 collectors[i].memory.invaderLooter = true;
-                console.log(collectors[i] + ' is now the invader looter');
+                console.log(room.link() + 'Creep \'' + collectors[i].name + '\' is now the invader looter.');
                 invaderLooterAnnounced = true;
                 break;
               } else
@@ -1139,188 +1274,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
           }
         } else invaderLooterAnnounced = false;
       }
-
-      //$ >#######################################################################################################################< $\\
-      //$> ######################################### ROOM VISUALS DISPLAY IMPLEMENTATION ######################################### <$\\
-      //$ >#######################################################################################################################< $\\
-
-
-      //: CONSOLE-BASED SPAWN INFO
-      const tickInterval: number = Memory.globalSettings.consoleSpawnInterval;
-
-      const energy:  string = ' NRG: ' + room.energyAvailable + '/' + room.energyCapacityAvailable + '(' + (room.energyAvailable / room.energyCapacityAvailable * 100).toFixed(0) + '%) ';
-      const hInfo:   string = (harvesterTarget)       ? '| H:'   + harvesters.length       + '(' + harvesterTarget       + ') ' : '';
-      const cInfo:   string = (collectorTarget)       ? '| C:'   + collectors.length       + '(' + collectorTarget       + ') ' : '';
-      const rInfo:   string = (runnerTarget)          ? '| Rn:'  + runners.length          + '(' + runnerTarget          + ') ' : '';
-      const bInfo:   string = (builderTarget)         ? '| B:'   + builders.length         + '(' + builderTarget         + ') ' : '';
-      const uInfo:   string = (upgraderTarget)        ? '| U:'   + upgraders.length        + '(' + upgraderTarget        + ') ' : '';
-      const rpInfo:  string = (repairerTarget)        ? '| Rp:'  + repairers.length        + '(' + repairerTarget        + ') ' : '';
-      const cnInfo:  string = (craneTarget)           ? '| Cn:'  + cranes.length           + '(' + craneTarget           + ') ' : '';
-      const rtInfo:  string = (rebooterTarget)        ? '| Rb:'  + rebooters.length        + '(' + rebooterTarget        + ') ' : '';
-      const rvInfo:  string = (reserverTarget)        ? '| Rv:'  + reservers.length        + '(' + reserverTarget        + ') ' : '';
-      const rngInfo: string = (rangerTarget)          ? '| Rng:' + rangers.length          + '(' + rangerTarget          + ') ' : '';
-      const warInfo: string = (warriorTarget)         ? '| War:' + warriors.length         + '(' + warriorTarget         + ') ' : '';
-      const hlrInfo: string = (healerTarget)          ? '| Hlr:' + healers.length          + '(' + healerTarget          + ') ' : '';
-      const rhInfo:  string = (remoteHarvesterTarget) ? '| RH:'  + remoteHarvesters.length + '(' + remoteHarvesterTarget + ') ' : '';
-      const rrInfo:  string = (remoteRunnerTarget)    ? '| RR:'  + remoteRunners.length    + '(' + remoteRunnerTarget    + ') ' : '';
-      const rbInfo:  string = (remoteBuilderTarget)   ? '| RB:'  + remoteBuilders.length   + '(' + remoteBuilderTarget   + ') ' : '';
-      const rgInfo:  string = (remoteGuardTarget)     ? '| RG:'  + remoteGuards.length     + '(' + remoteGuardTarget     + ')' : '';
-
-      if (tickInterval !== 0 && tickCount % tickInterval === 0) {
-        console.log(room.link() + energy + hInfo + cInfo + rInfo + bInfo + uInfo + rpInfo + cnInfo + rtInfo + rvInfo + rngInfo + warInfo + hlrInfo + rhInfo + rrInfo + rbInfo + rgInfo);
-      }
-
-      //: ROOM VISUALS - SPAWN INFO BOXES
-      const rmFlgs: RoomFlags = rMem.settings.flags;
-      const rmVis: VisualSettings = rMem.settings.visualSettings;
-
-      if (rmVis.spawnInfo === undefined)
-        room.initSettings();
-      const alignment: alignment = rmVis.spawnInfo.alignment;
-      const spawnColor: string = rmVis.spawnInfo.color;
-      const spawnFont: number = rmVis.spawnInfo.fontSize || 0.5;
-      let spawnX: number = 49;
-      if (alignment == 'left')
-        spawnX = 0;
-      //* BOTTOM RIGHT BOX
-      room.visual.rect(
-        41.75,
-        44.5,
-        7.5,
-        4.75,
-        { fill: '#555555', stroke: '#aaaaaa', opacity: 0.3, strokeWidth: 0.2 })
-      //* Harvesters, Collectors, Upgraders, Builders, Cranes
-      room.visual.text(
-            'H:'  + harvesters.length + '(' + harvesterTarget +
-        ') | C:'  + collectors.length + '(' + collectorTarget +
-        ') | U:'  + upgraders.length  + '(' + upgraderTarget  +
-        ') | B:'  + builders.length   + '(' + builderTarget   +
-        ') | Cn:' + cranes.length     + '(' + craneTarget     + ')',
-        spawnX,
-        49,
-        { align: alignment, color: spawnColor, font: spawnFont });
-      //* Remote Harvesters, Remote Runners, Remote Builders, Remote Guards
-      room.visual.text(
-            'RH:' + remoteHarvesters.length + '(' + remoteHarvesterTarget +
-        ') | RR:' + remoteRunners.length    + '(' + remoteRunnerTarget    +
-        ') | RB:' + remoteBuilders.length   + '(' + remoteBuilderTarget   +
-        ') | RG:' + remoteGuards.length     + '(' + remoteGuardTarget     + ')',
-        spawnX,
-        48,
-        { align: alignment, color: spawnColor, font: spawnFont });
-      //* Runners, Repaireres, Rebooters, Reservers
-      room.visual.text(
-            'Rn:' + runners.length   + '(' + runnerTarget   +
-        ') | Rp:' + repairers.length + '(' + repairerTarget +
-        ') | Rb:' + rebooters.length + '(' + rebooterTarget +
-        ') | Rv:' + reservers.length + '(' + reserverTarget + ')',
-        spawnX,
-        47,
-        { align: alignment, color: spawnColor, font: spawnFont });
-      //* Rangers, Warriors, Healers
-      room.visual.text(
-            'Rng:' + rangers.length   + '(' + rangerTarget  +
-        ') | War:' + warriors.length  + '(' + warriorTarget +
-        ') | Hlr:' + healers.length   + '(' + healerTarget  + ')',
-        spawnX,
-        46,
-        { align: alignment, color: spawnColor, font: spawnFont });
-      //* Energy Available, Energy Capacity
-      room.visual.text(
-        'Energy: ' + room.energyAvailable + '('
-           + room.energyCapacityAvailable + ')',
-        spawnX,
-        45,
-        { align: alignment, color: spawnColor, font: spawnFont });
-
-      //* TOP RIGHT BOX
-      room.visual.rect(
-        41.75,
-        0,
-        7.5,
-        4.75,
-        { fill: '#555555', stroke: '#aaaaaa', opacity: 0.3, strokeWidth: 0.2 })
-      //* Harvesters, Collectors, Upgraders, Builders, Cranes
-      room.visual.text(
-            'H:'  + harvesters.length + '(' + harvesterTarget +
-        ') | C:'  + collectors.length + '(' + collectorTarget +
-        ') | U:'  + upgraders.length  + '(' + upgraderTarget  +
-        ') | B:'  + builders.length   + '(' + builderTarget   +
-        ') | Cn:' + cranes.length     + '(' + craneTarget     + ')',
-        spawnX,
-        0.5,
-        { align: alignment, color: spawnColor, font: spawnFont });
-      //* Remote Harvesters, Remote Runners, Remote Builders, Remote Guards
-      room.visual.text(
-            'RH:' + remoteHarvesters.length + '(' + remoteHarvesterTarget +
-        ') | RR:' + remoteRunners.length    + '(' + remoteRunnerTarget    +
-        ') | RB:' + remoteBuilders.length   + '(' + remoteBuilderTarget   +
-        ') | RG:' + remoteGuards.length     + '(' + remoteGuardTarget     + ')',
-        spawnX,
-        1.5,
-        { align: alignment, color: spawnColor, font: spawnFont });
-      //* Runners, Repaireres, Rebooters, Reservers
-      room.visual.text(
-            'Rn:' + runners.length   + '(' + runnerTarget   +
-        ') | Rp:' + repairers.length + '(' + repairerTarget +
-        ') | Rb:' + rebooters.length + '(' + rebooterTarget +
-        ') | Rv:' + reservers.length + '(' + reserverTarget + ')',
-        spawnX,
-        2.5,
-        { align: alignment, color: spawnColor, font: spawnFont });
-      //* Rangers, Warriors, Healers
-      room.visual.text(
-            'Rng:' + rangers.length   + '(' + rangerTarget  +
-        ') | War:' + warriors.length  + '(' + warriorTarget +
-        ') | Hlr:' + healers.length   + '(' + healerTarget  + ')',
-        spawnX,
-        3.5,
-        { align: alignment, color: spawnColor, font: spawnFont });
-      //* Energy Available, Energy Capacity
-      room.visual.text(
-        'Energy: ' + room.energyAvailable + '('
-        + room.energyCapacityAvailable + ')',
-        spawnX,
-        4.5,
-        { align: alignment, color: spawnColor, font: spawnFont });
-
-      //* ROOM VISUALS - ROOM FLAG SETTINGS BOX
-
-      const xCoord:       number = rmVis.roomFlags.displayCoords[0];
-      const yCoord:       number = rmVis.roomFlags.displayCoords[1];
-      const fontSize:     number = rmVis.roomFlags.fontSize || 0.4;
-      const displayColor: string = rmVis.roomFlags.color;
-
-      //* OUTER RECTANGLE
-      room.visual.rect(
-        xCoord - 0.15,
-        yCoord - 1.2,
-        13,
-        1.35,
-        { fill: '#770000', stroke: '#aa0000', opacity: 0.3, strokeWidth: 0.1 })
-      //* TOP ROW FLAGS
-      room.visual.text(
-           'CSL('    + rmFlgs.centralStorageLogic   +
-        ')  SCS('    + rmFlgs.sortConSites          +
-        ')  CCS('    + rmFlgs.closestConSites       +
-        ')  CU('     + rmFlgs.craneUpgrades         +
-        ')   HFA('   + rmFlgs.harvestersFixAdjacent +
-        ')     RDM(' + rmFlgs.runnersDoMinerals     + ')',
-        xCoord,
-        (yCoord - 0.6),
-        { align: 'left', font: fontSize, color: displayColor });
-      //* BOTTOM ROW FLAGS
-      room.visual.text(
-           'RDP('  + rmFlgs.runnersDoPiles      +
-        ')   RB('  + rmFlgs.repairBasics        +
-        ')   RR('  + rmFlgs.repairRamparts      +
-        ')    RW(' + rmFlgs.repairWalls         +
-        ')   TRB(' + rmFlgs.towerRepairBasic    +
-        ')   TRD(' + rmFlgs.towerRepairDefenses + ')',
-        xCoord,
-        yCoord - 0.1,
-        { align: 'left', font: fontSize, color: displayColor });
-
 
       //$ >#######################################################################################################################< $\\
       //$> ############################################### SPAWN VARIANT ALLOCATION ############################################## <$\\
@@ -1404,6 +1357,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
         availableVariants.runner       = spawnVariants.runner300;
         availableVariants.crane        = spawnVariants.crane500;
         availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.reserver     = spawnVariants.reserver650;
       } else if (room.energyCapacityAvailable <= 1000) {
         availableVariants.harvester    = spawnVariants.harvester550;
         availableVariants.collector    = spawnVariants.collector500;
@@ -1413,6 +1367,17 @@ export const loop = ErrorMapper.wrapLoop(() => {
         availableVariants.runner       = spawnVariants.runner300;
         availableVariants.crane        = spawnVariants.crane500;
         availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.reserver     = spawnVariants.reserver650;
+      } else if (room.energyCapacityAvailable <= 1250) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector500;
+        availableVariants.upgrader     = spawnVariants.upgrader700;
+        availableVariants.builder      = spawnVariants.builder800;
+        availableVariants.repairer     = spawnVariants.repairer800;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.reserver     = spawnVariants.reserver650;
       } else if (room.energyCapacityAvailable <= 1300) {
         availableVariants.harvester    = spawnVariants.harvester550;
         availableVariants.collector    = spawnVariants.collector500;
@@ -1469,11 +1434,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (harvesters[0].memory.source == harvesters[1].memory.source) {
           if (harvesters[0].ticksToLive > harvesters[1].ticksToLive) {
             harvesters[1].assignHarvestSource(true);
-            console.log('[' + room.name + ']: Reassigned ' + harvesters[1].name + '\'s source due to conflict.')
+            console.log(room.link() + 'Reassigned ' + harvesters[1].name + '\'s source due to conflict.')
           }
           else {
             harvesters[0].assignHarvestSource(true);
-            console.log('[' + room.name + ']: Reassigned ' + harvesters[0].name + '\'s source due to conflict.')
+            console.log(room.link() + 'Reassigned ' + harvesters[0].name + '\'s source due to conflict.')
           }
         }
       }
@@ -1493,13 +1458,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
         runnerDying = false;
         if (runners[i].ticksToLive <= 20) {
           runnerDying = true;
-          break;
-        }
-      }
-      for (let i = 0; i < reservers.length; i++) {        // * Reserver Pre-Spawn
-        reserverDying = false;
-        if (reservers[i].ticksToLive <= 90) {
-          reserverDying = true;
           break;
         }
       }
@@ -1654,7 +1612,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
               }
             } else if (remoteBuilders.length < remoteBuilderTarget) {
               newName = colonyName + '_RB' + remoteBuilderCount;
-              while (readySpawn.spawnCreep([WORK, WORK, WORK, WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], newName, { memory: { role: 'remotebuilder', roleForQuota: 'remotebuilder', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+              while (readySpawn.spawnCreep(availableVariants.builder, newName, { memory: { role: 'remotebuilder', roleForQuota: 'remotebuilder', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
                 remoteBuilderCount++;
                 newName = colonyName + '_RB' + remoteBuilderCount;
               }
@@ -1701,7 +1659,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
           }
         }
 
-        // Display creep spawning information next to spawn
+      //$ >#######################################################################################################################< $\\
+      //#region ######################################### ROOM VISUALS DISPLAY IMPLEMENTATION #################################### <$\\
+      //$ >#######################################################################################################################< $\\
+
+      //: PER SPAWN CREEP SPAWNING INFORMATION
         for (let i = 0; i < rMem.objects.spawns.length; i++) {
           let spawnObjects: Array<StructureSpawn> = [];
           for (let j = 0; j < rMem.objects.spawns.length; j++)
@@ -1720,8 +1682,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
           }
         }
 
-        if (room.controller.level >= 1)
-          visualRCProgress(room.controller);
+        if (room.controller.level >= 1) visualRCProgress(room.controller);
 
         room.visual.text('Energy: ' + room.energyAvailable
           + '/' + room.energyCapacityAvailable,
@@ -1733,12 +1694,204 @@ export const loop = ErrorMapper.wrapLoop(() => {
           room.visual.text(' Storage: ' + room.storage.store[RESOURCE_ENERGY], room.storage.pos.x, room.storage.pos.y - 1, { align: 'center', opacity: 0.8, font: 0.4, stroke: '#000000', color: '#ffff00' })
         }
       }
-    } // * END OF (ROOMS CLAIMED BY BOT)
 
-  }); // * END OF (FOR EACH ROOM BOT HAS VISIBILITY)
+      //: CONSOLE-BASED CREEP CENSUS VS TARGETS & ENERGY CAPACITY
+      const tickInterval: number = Memory.globalSettings.consoleSpawnInterval;
+
+      const energy:  string = 'NRG: ' + room.energyAvailable + '/' + room.energyCapacityAvailable + '(' + (room.energyAvailable / room.energyCapacityAvailable * 100).toFixed(0) + '%) ';
+      const hInfo:   string = (harvesterTarget)       ? '| H:'   + harvesters.length       + '(' + harvesterTarget       + ') ' : '';
+      const cInfo:   string = (collectorTarget)       ? '| C:'   + collectors.length       + '(' + collectorTarget       + ') ' : '';
+      const rInfo:   string = (runnerTarget)          ? '| Rn:'  + runners.length          + '(' + runnerTarget          + ') ' : '';
+      const bInfo:   string = (builderTarget)         ? '| B:'   + builders.length         + '(' + builderTarget         + ') ' : '';
+      const uInfo:   string = (upgraderTarget)        ? '| U:'   + upgraders.length        + '(' + upgraderTarget        + ') ' : '';
+      const rpInfo:  string = (repairerTarget)        ? '| Rp:'  + repairers.length        + '(' + repairerTarget        + ') ' : '';
+      const cnInfo:  string = (craneTarget)           ? '| Cn:'  + cranes.length           + '(' + craneTarget           + ') ' : '';
+      const rtInfo:  string = (rebooterTarget)        ? '| Rb:'  + rebooters.length        + '(' + rebooterTarget        + ') ' : '';
+      const rvInfo:  string = (reserverTarget)        ? '| Rv:'  + reservers.length        + '(' + reserverTarget        + ') ' : '';
+      const rngInfo: string = (rangerTarget)          ? '| Rng:' + rangers.length          + '(' + rangerTarget          + ') ' : '';
+      const warInfo: string = (warriorTarget)         ? '| War:' + warriors.length         + '(' + warriorTarget         + ') ' : '';
+      const hlrInfo: string = (healerTarget)          ? '| Hlr:' + healers.length          + '(' + healerTarget          + ') ' : '';
+      const rhInfo:  string = (remoteHarvesterTarget) ? '| RH:'  + remoteHarvesters.length + '(' + remoteHarvesterTarget + ') ' : '';
+      const rrInfo:  string = (remoteRunnerTarget)    ? '| RR:'  + remoteRunners.length    + '(' + remoteRunnerTarget    + ') ' : '';
+      const rbInfo:  string = (remoteBuilderTarget)   ? '| RB:'  + remoteBuilders.length   + '(' + remoteBuilderTarget   + ') ' : '';
+      const rgInfo:  string = (remoteGuardTarget)     ? '| RG:'  + remoteGuards.length     + '(' + remoteGuardTarget     + ')' : '';
+
+      if (tickInterval !== 0 && tickCount % tickInterval === 0) {
+        console.log(room.link() + energy + hInfo + cInfo + rInfo + bInfo + uInfo + rpInfo + cnInfo + rtInfo + rvInfo + rngInfo + warInfo + hlrInfo + rhInfo + rrInfo + rbInfo + rgInfo + ' Tick: ' + tickCount);
+      }
+
+      //: ROOM VISUALS - SPAWN INFO BOXES
+      const rmFlgs: RoomFlags = rMem.settings.flags;
+      const rmVis: VisualSettings = rMem.settings.visualSettings;
+
+      if (rmVis === undefined || rmVis.spawnInfo === undefined) room.initSettings();
+      const alignment: alignment = rmVis.spawnInfo.alignment;
+      const spawnColor: string = rmVis.spawnInfo.color;
+      const spawnFont: number = rmVis.spawnInfo.fontSize || 0.5;
+      let spawnX: number = 49;
+      if (alignment == 'left') spawnX = 0;
+
+      //* BOTTOM RIGHT BOX
+      room.visual.rect(
+        41.75,
+        44.5,
+        7.5,
+        4.75,
+        { fill: '#555555', stroke: '#aaaaaa', opacity: 0.3, strokeWidth: 0.2 })
+      // Harvesters, Collectors, Upgraders, Builders, Cranes
+      room.visual.text(
+            'H:'  + harvesters.length + '(' + harvesterTarget +
+        ') | C:'  + collectors.length + '(' + collectorTarget +
+        ') | U:'  + upgraders.length  + '(' + upgraderTarget  +
+        ') | B:'  + builders.length   + '(' + builderTarget   +
+        ') | Cn:' + cranes.length     + '(' + craneTarget     + ')',
+        spawnX,
+        49,
+        { align: alignment, color: spawnColor, font: spawnFont });
+      // Remote Harvesters, Remote Runners, Remote Builders, Remote Guards
+      room.visual.text(
+            'RH:' + remoteHarvesters.length + '(' + remoteHarvesterTarget +
+        ') | RR:' + remoteRunners.length    + '(' + remoteRunnerTarget    +
+        ') | RB:' + remoteBuilders.length   + '(' + remoteBuilderTarget   +
+        ') | RG:' + remoteGuards.length     + '(' + remoteGuardTarget     + ')',
+        spawnX,
+        48,
+        { align: alignment, color: spawnColor, font: spawnFont });
+      // Runners, Repaireres, Rebooters, Reservers
+      room.visual.text(
+            'Rn:' + runners.length   + '(' + runnerTarget   +
+        ') | Rp:' + repairers.length + '(' + repairerTarget +
+        ') | Rb:' + rebooters.length + '(' + rebooterTarget +
+        ') | Rv:' + reservers.length + '(' + reserverTarget + ')',
+        spawnX,
+        47,
+        { align: alignment, color: spawnColor, font: spawnFont });
+      // Rangers, Warriors, Healers
+      room.visual.text(
+            'Rng:' + rangers.length   + '(' + rangerTarget  +
+        ') | War:' + warriors.length  + '(' + warriorTarget +
+        ') | Hlr:' + healers.length   + '(' + healerTarget  + ')',
+        spawnX,
+        46,
+        { align: alignment, color: spawnColor, font: spawnFont });
+      // Energy Available, Energy Capacity
+      room.visual.text(
+        'Energy: ' + room.energyAvailable + '('
+           + room.energyCapacityAvailable + ')',
+        spawnX,
+        45,
+        { align: alignment, color: spawnColor, font: spawnFont });
+
+      //* TOP RIGHT BOX
+      room.visual.rect(
+        41.75,
+        0,
+        7.5,
+        4.75,
+        { fill: '#555555', stroke: '#aaaaaa', opacity: 0.3, strokeWidth: 0.2 })
+      // Harvesters, Collectors, Upgraders, Builders, Cranes
+      room.visual.text(
+            'H:'  + harvesters.length + '(' + harvesterTarget +
+        ') | C:'  + collectors.length + '(' + collectorTarget +
+        ') | U:'  + upgraders.length  + '(' + upgraderTarget  +
+        ') | B:'  + builders.length   + '(' + builderTarget   +
+        ') | Cn:' + cranes.length     + '(' + craneTarget     + ')',
+        spawnX,
+        0.5,
+        { align: alignment, color: spawnColor, font: spawnFont });
+      // Remote Harvesters, Remote Runners, Remote Builders, Remote Guards
+      room.visual.text(
+            'RH:' + remoteHarvesters.length + '(' + remoteHarvesterTarget +
+        ') | RR:' + remoteRunners.length    + '(' + remoteRunnerTarget    +
+        ') | RB:' + remoteBuilders.length   + '(' + remoteBuilderTarget   +
+        ') | RG:' + remoteGuards.length     + '(' + remoteGuardTarget     + ')',
+        spawnX,
+        1.5,
+        { align: alignment, color: spawnColor, font: spawnFont });
+      // Runners, Repairers, Rebooters, Reservers
+      room.visual.text(
+            'Rn:' + runners.length   + '(' + runnerTarget   +
+        ') | Rp:' + repairers.length + '(' + repairerTarget +
+        ') | Rb:' + rebooters.length + '(' + rebooterTarget +
+        ') | Rv:' + reservers.length + '(' + reserverTarget + ')',
+        spawnX,
+        2.5,
+        { align: alignment, color: spawnColor, font: spawnFont });
+      // Rangers, Warriors, Healers
+      room.visual.text(
+            'Rng:' + rangers.length   + '(' + rangerTarget  +
+        ') | War:' + warriors.length  + '(' + warriorTarget +
+        ') | Hlr:' + healers.length   + '(' + healerTarget  + ')',
+        spawnX,
+        3.5,
+        { align: alignment, color: spawnColor, font: spawnFont });
+      // Energy Available, Energy Capacity
+      room.visual.text(
+        'Energy: ' + room.energyAvailable + '('
+        + room.energyCapacityAvailable + ')',
+        spawnX,
+        4.5,
+        { align: alignment, color: spawnColor, font: spawnFont });
+
+      //: ROOM VISUALS - ROOM FLAG SETTINGS BOX
+
+      const xCoord:       number = rmVis.roomFlags.displayCoords[0];
+      const yCoord:       number = rmVis.roomFlags.displayCoords[1];
+      const fontSize:     number = rmVis.roomFlags.fontSize || 0.4;
+      const displayColor: string = rmVis.roomFlags.color;
+
+      //* OUTER RECTANGLE
+      room.visual.rect(
+        xCoord - 0.15,
+        yCoord - 1.2,
+        13,
+        1.35,
+        { fill: '#770000', stroke: '#aa0000', opacity: 0.3, strokeWidth: 0.1 })
+      //* TOP ROW FLAGS
+      room.visual.text(
+           'CSL('    + rmFlgs.centralStorageLogic   +
+        ')  SCS('    + rmFlgs.sortConSites          +
+        ')  CCS('    + rmFlgs.closestConSites       +
+        ')  CU('     + rmFlgs.craneUpgrades         +
+        ')   HFA('   + rmFlgs.harvestersFixAdjacent +
+        ')     RDM(' + rmFlgs.runnersDoMinerals     + ')',
+        xCoord,
+        (yCoord - 0.6),
+        { align: 'left', font: fontSize, color: displayColor });
+      //* BOTTOM ROW FLAGS
+      room.visual.text(
+           'RDP('  + rmFlgs.runnersDoPiles      +
+        ')   RB('  + rmFlgs.repairBasics        +
+        ')   RR('  + rmFlgs.repairRamparts      +
+        ')    RW(' + rmFlgs.repairWalls         +
+        ')   TRB(' + rmFlgs.towerRepairBasic    +
+        ')   TRD(' + rmFlgs.towerRepairDefenses + ')',
+        xCoord,
+        yCoord - 0.1,
+        { align: 'left', font: fontSize, color: displayColor });
+
+      //: TOWER DAMAGE BOX DISPLAYS
+      if (room.memory.settings.visualSettings.displayTowerRanges) {
+        _.forEach(room.memory.objects.towers, function (towerID) {
+          const tower = Game.getObjectById(towerID);
+          tower.room.visual.rect(-0.5, -0.5, 51, 51, { fill: '#550000', opacity: 0.25, stroke: '#880000' });
+          tower.room.visual.rect(tower.pos.x - 19.5, tower.pos.y - 19.5, 39, 39, { fill: '#aa3e00', opacity: 0.15, stroke: '#ff8800' });
+          tower.room.visual.rect(tower.pos.x - 15.5, tower.pos.y - 15.5, 31, 31, { fill: '#aaaa00', opacity: 0.2, stroke: '#ffff00' });
+          tower.room.visual.rect(tower.pos.x - 10.5, tower.pos.y - 10.5, 21, 21, { fill: '#003300', opacity: 0.2, stroke: '#008800' });
+          tower.room.visual.rect(tower.pos.x - 5.5, tower.pos.y - 5.5, 11, 11, { fill: '#4476ff', opacity: 0.25, stroke: '#00e1ff' });
+
+
+        })
+      }
+
+      // #endregion *******************************************************************************************************************
+
+    } // ! END OF (ROOMS CLAIMED BY BOT)
+
+  }); // ! END OF (FOR EACH ROOM BOT HAS VISIBILITY)
 
   //$ >##########################################################################################################################< $\\
-  //$> ############################################### ROLE EXECUTION SWITCH CASE ############################################### <$\\
+  //$> ############################################# ROLE EXECUTION SWITCH CASE ################################################# <$\\
   //$ >##########################################################################################################################< $\\
 
   for(let name in Game.creeps) {
@@ -1824,5 +1977,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
         break;
     }
   }
+  //$ >########################################## END OF ROLE EXECUTION SWITCH CASE ##############################################< $\\
   tickCount++;
-}); // * END OF MAIN LOOP
+}); // ! END OF MAIN LOOP
+
+
