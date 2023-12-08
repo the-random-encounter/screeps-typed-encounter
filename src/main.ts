@@ -1165,12 +1165,18 @@ export const loop = ErrorMapper.wrapLoop(() => {
       if (rMem.objects.links) {
         if (rMem.data.linkRegistry === undefined) room.registerLinks();
 
-        if (rMem.objects.links.length < 4) {
+        const registeredLinks = Object.entries(rMem.data.linkRegistry);
+
+        if (rMem.objects.links.length !== registeredLinks.length) {
           let counter: number = 0;
           if (rMem.data.linkRegistry.sourceOne      )  counter++;
           if (rMem.data.linkRegistry.central        )  counter++;
           if (rMem.data.linkRegistry.sourceTwo      )  counter++;
-          if (rMem.data.linkRegistry.destination    )  counter++;
+          if (rMem.data.linkRegistry.destination) counter++;
+          if (rMem.data.linkRegistry.remotes) {
+            for (let link in rMem.data.linkRegistry.remotes)
+              counter++;
+          }
           if (rMem.objects.links.length !== counter )  room.registerLinks();
         }
 
@@ -1178,11 +1184,14 @@ export const loop = ErrorMapper.wrapLoop(() => {
         let linkTwo:      StructureLink;
         let linkCentral:  StructureLink;
         let linkDest:     StructureLink;
+        let linkRem1:     StructureLink;
+
 
         if (rMem.data.linkRegistry.sourceOne  ) linkOne     = Game.getObjectById(rMem.data.linkRegistry.sourceOne   );
         if (rMem.data.linkRegistry.sourceTwo  ) linkTwo     = Game.getObjectById(rMem.data.linkRegistry.sourceTwo   );
         if (rMem.data.linkRegistry.destination) linkDest    = Game.getObjectById(rMem.data.linkRegistry.destination );
         if (rMem.data.linkRegistry.central    ) linkCentral = Game.getObjectById(rMem.data.linkRegistry.central     );
+        if (rMem.data.linkRegistry.remotes[0] ) linkRem1    = Game.getObjectById(rMem.data.linkRegistry.remotes[ 0 ]);
 
         if (linkCentral && linkOne) {
           if ((linkOne.store.getFreeCapacity(RESOURCE_ENERGY) < 100) && linkOne.cooldown == 0 && (linkCentral.store.getFreeCapacity(RESOURCE_ENERGY) >= linkOne.store.getUsedCapacity(RESOURCE_ENERGY)))
@@ -1195,6 +1204,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (linkCentral && linkDest) {
           if ((linkCentral.store[RESOURCE_ENERGY] > 99) && linkCentral.cooldown == 0 && linkDest.store[RESOURCE_ENERGY] < 401)
             linkCentral.transferEnergy(linkDest);
+        }
+
+        if (linkCentral && linkRem1) {
+          if ((linkRem1.store.getUsedCapacity(RESOURCE_ENERGY) > 700) && linkRem1.cooldown == 0 && (linkCentral.store.getFreeCapacity(RESOURCE_ENERGY) >= linkRem1.store.getUsedCapacity(RESOURCE_ENERGY)))
+            linkRem1.transferEnergy(linkCentral);
         }
       }
 
