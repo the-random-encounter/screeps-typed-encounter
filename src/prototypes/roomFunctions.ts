@@ -1396,6 +1396,9 @@ Room.prototype.registerLinks               = function() {
     linkSource2 = source2.pos.findInRange(FIND_MY_STRUCTURES, 3,{ filter: { structureType: STRUCTURE_LINK } });
     linkDestination = controller.pos.findInRange(FIND_MY_STRUCTURES, 3, { filter: { structureType: STRUCTURE_LINK } });
     linkRemotes = this.find(FIND_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && ((i.pos.x <= 4 || i.pos.x >= 45) && (i.pos.y <= 4 || i.pos.y >= 45)) });
+    console.log('linkRemotes: ' + linkRemotes);
+
+    const linkRemotes2: StructureLink[] = Game.flags.remLink1.pos.findInRange(FIND_STRUCTURES, 1, { filter: { structureType: STRUCTURE_LINK } });
 
     let linkReport = this.link() + ': LINK REGISTRATION REPORT:-------------------###';
 
@@ -1415,10 +1418,11 @@ Room.prototype.registerLinks               = function() {
       this.memory.data.linkRegistry.destination = linkDestination[0].id;
       linkReport += '\n CONTROLLER LINK: REGISTERED';
     }
-    if (linkRemotes.length > 0) {
+    if (linkRemotes2.length > 0) {
       let remoteIDs: Array<Id<StructureLink>> = [];
-      for (let i = 0; i < linkRemotes.length; i++) {
-        remoteIDs.push(linkRemotes[i].id);
+      for (let i = 0; i < linkRemotes2.length; i++) {
+        remoteIDs.push(linkRemotes2[ i ].id);
+        linkReport += '\n REMOTE LOGISTICS LINK #' + i + ' OF ' + linkRemotes2.length + ': REGISTERED';
       }
       this.memory.data.linkRegistry.remotes = remoteIDs;
     }
