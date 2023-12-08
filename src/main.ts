@@ -1132,7 +1132,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
       if (tickCount > 0 && tickCount % 1000 == 0) {
         console.log(room.link() + 'MAIN LOOP, CACHING OBJECTS EVERY 1000 TICKS --- Tick#: ' + tickCount);
         room.cacheObjects();
-        tickCount = 0;
       }
 
       if (Memory.colonies.registry[room.name] === undefined) {
@@ -1426,6 +1425,10 @@ export const loop = ErrorMapper.wrapLoop(() => {
       let remoteLogisticians: Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remotelogistician' &&      creep.memory.homeRoom == roomName);
 
       let sites: Array<ConstructionSite> = room.find(FIND_CONSTRUCTION_SITES);
+      let remoteSites: Array<ConstructionSite> = [];
+
+      if (room.memory.data.remoteWorkRoom)
+        Game.rooms[room.memory.data.remoteWorkRoom].find(FIND_CONSTRUCTION_SITES);
 
       // Select a non-geriatric collector to loot compounds or energy from enemy corpses
       let invaderLooterAnnounced: boolean = false;
@@ -1634,7 +1637,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
                 minerCount++;
                 newName = colonyName + '_M' + minerCount;
               }
-            } else if ((scientists.length < scientistTarget && rMem.objects.labs) /*&& rMem.settings.flags.doScience*/) {
+            } else if (scientists.length < scientistTarget && rMem.objects.labs) {
               newName = colonyName + '_S' + scientistCount;
               while (readySpawn.spawnCreep([MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY], newName, { memory: { role: 'scientist', roleForQuota: 'scientist', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
                 scientistCount++;
@@ -1658,7 +1661,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
                 remoteRunnerCount++;
                 newName = colonyName + '_RR' + remoteRunnerCount;
               }
-            } else if (remoteBuilders.length < remoteBuilderTarget) {
+            } else if (remoteSites.length > 0 && remoteBuilders.length < remoteBuilderTarget) {
               newName = colonyName + '_RB' + remoteBuilderCount;
               while (readySpawn.spawnCreep(availableVariants.builder, newName, { memory: { role: 'remotebuilder', roleForQuota: 'remotebuilder', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
                 remoteBuilderCount++;
