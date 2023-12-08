@@ -127,26 +127,29 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy:
 
         if (maxCarryParts > carryParts) maxCarryParts = carryParts;
         if (maxMoveParts  > moveParts ) maxMoveParts  = moveParts;
-        //console.log('pathLength: ' + pathLen);
+        console.log('pathLength: ' + pathLen);
 
         for (let i = 0; i < maxCarryParts; i++) carryArray.push(CARRY);
 
 
         for (let i = 0; i < maxMoveParts; i++)  moveArray.push(MOVE);
 
-        const currCarryCost : number  = carryArray.length * 50;
-        const currMoveCost  : number  = moveArray.length  * 50;
-        const partCost: number = currCarryCost + currMoveCost;
+        let currCarryCost : number  = carryArray.length * 50;
+        let currMoveCost  : number  = moveArray .length * 50;
+        let partCost      : number  = currCarryCost + currMoveCost;
+
         if (maxEnergy - partCost >= 50) carryArray.push(CARRY);
         if (maxEnergy - partCost >= 100 && carryArray.length % 2 == 1) moveArray.push(MOVE);
 
+        currCarryCost = carryArray.length * 50;
+        currMoveCost  = moveArray .length * 50;
+        partCost      = currCarryCost + currMoveCost;
 
         let bodyArray : BodyPartConstant[] = carryArray.concat(moveArray);
 
-
-        /*if (locality == 'remote') {
+        if (locality == 'remote') {
           let isEven = carryArray.length % 2;
-          if (isEven == 0) {
+          if (isEven) {
             if (maxEnergy - partCost >= 150) {
               bodyArray.push(WORK);
               bodyArray.push(MOVE);
@@ -165,13 +168,11 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy:
               bodyArray.shift();
               bodyArray.push(WORK);
             }
-            else
-              bodyArray.push(WORK);
           }
-        }*/
-        //console.log(bodyArray);
-        //console.log('carryParts: ' + carryArray.length + ' maxCarryParts: ' + maxCarryParts + ' | moveParts: ' + moveArray.length + ' maxMoveParts: ' + maxMoveParts);
-        //console.log('carryCost: ' + carryArray.length * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + moveArray.length * 50 + ' maxMoveCost: ' + maxMoveCost);
+        }
+        console.log(bodyArray);
+        console.log('carryParts: ' + carryArray.length + ' maxCarryParts: ' + maxCarryParts + ' | moveParts: ' + moveArray.length + ' maxMoveParts: ' + maxMoveParts);
+        console.log('carryCost: ' + carryArray.length * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + moveArray.length * 50 + ' maxMoveCost: ' + maxMoveCost);
         return bodyArray;
       } catch (e: any) {
         console.log(e);
