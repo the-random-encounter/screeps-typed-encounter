@@ -259,11 +259,8 @@ export const roleClaimer = {
         }
       } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleCollector = {
@@ -461,9 +458,8 @@ export const roleCollector = {
             }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
     } else { //: MY AI IS DISABLED, DURRRRR..... *drools*
       if (!Memory.globalSettings.alertDisabled)
         console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
@@ -573,9 +569,8 @@ export const roleCrane = {
             }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
     } else { // :MY AI IS DISABLED, DURRRRR..... *drools*
       if (!Memory.globalSettings.alertDisabled)
         console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
@@ -669,14 +664,10 @@ export const roleHarvester = {
             }
           } else creep.harvestEnergy();
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleHealer = {
@@ -692,17 +683,15 @@ export const roleHealer = {
     if (cMem.disableAI === undefined) cMem.disableAI = false;
     if (cMem.attackRoom === undefined) cMem.attackRoom = room.name;
     if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
-    if (cMem.customAttackTarget === undefined) cMem.customAttackTarget = 'none';
-
 
     if (!cMem.disableAI) {
 
       if (cMem.rallyPoint == 'none') {
 
-			if      (pos.x == 49) creep.move(LEFT   );
-      else if (pos.x == 0 ) creep.move(RIGHT  );
-      else if (pos.y == 49) creep.move(TOP    );
-      else if (pos.y == 0 ) creep.move(BOTTOM );
+        if      (pos.x == 49) creep.move(LEFT   );
+        else if (pos.x == 0 ) creep.move(RIGHT  );
+        else if (pos.y == 49) creep.move(TOP    );
+        else if (pos.y == 0 ) creep.move(BOTTOM );
 
         if (creep.ticksToLive <= 2) creep.say('☠️');
 
@@ -730,14 +719,10 @@ export const roleHealer = {
             }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleInvader = {
@@ -752,9 +737,9 @@ export const roleInvader = {
     if (cMem.disableAI  === undefined) cMem.disableAI  = false;
     if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
 
-    if (cMem.targetRoom === undefined) {
-      if (rMem.data.combatObjectives.targetRoom === undefined) rMem.data.combatObjectives.targetRoom;
-      else cMem.targetRoom = rMem.data.combatObjectives.targetRoom;
+    if (cMem.attackRoom === undefined) {
+      if (rMem.data.combatObjectives.attackRoom === undefined) rMem.data.combatObjectives.attackRoom;
+      else cMem.attackRoom = rMem.data.combatObjectives.attackRoom;
     }
 
     if (cMem.musterPoint === undefined) {
@@ -799,7 +784,7 @@ export const roleInvader = {
 
               if (hostilesInRoom.length > 0) {
                 const nearestHostileCombatant = pos.findClosestByRange(hostilesInRoom);
-                const attackResult = creep.attack(nearestHostileCombatant);
+                const attackResult = creep.rangedAttack(nearestHostileCombatant);
 
                 switch (attackResult) {
 
@@ -818,7 +803,7 @@ export const roleInvader = {
                 if (hostileTowers.length > 0) {
 
                   const closestHostileTowerByPath = pos.findClosestByPath(hostileTowers);
-                  const attackResult              = creep.attack(closestHostileTowerByPath);
+                  const attackResult              = creep.rangedAttack(closestHostileTowerByPath);
 
                   switch (attackResult) {
                     case ERR_NOT_IN_RANGE:
@@ -835,7 +820,7 @@ export const roleInvader = {
 
                   if (enemyCivilians.length > 0) {
                     const closestEnemyCivilian = pos.findClosestByRange(enemyCivilians);
-                    const attackResult = creep.attack(closestEnemyCivilian);
+                    const attackResult = creep.rangedAttack(closestEnemyCivilian);
                     switch (attackResult) {
                       case ERR_NOT_IN_RANGE:
                         creep.say('Moving to engage enemy civilian!');
@@ -982,14 +967,10 @@ export const roleInvader = {
             break;
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleMiner = {
@@ -1033,14 +1014,10 @@ export const roleMiner = {
           if (Game.getObjectById(room.memory.objects.extractor).cooldown == 0)
             creep.harvestMineral();
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleProvider = {
@@ -1099,14 +1076,10 @@ export const roleProvider = {
               creep.moveTo(logSpot, pathing.providerPathing)
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleRanger = {
@@ -1119,49 +1092,86 @@ export const roleRanger = {
     const rMem:  RoomMemory    = room.memory;
     const pos :  RoomPosition  = creep.pos;
 
-    if (cMem.disableAI === undefined ) cMem.disableAI   = false;
-    if (cMem.rallyPoint === undefined)  cMem.rallyPoint = 'none';
-    if (cMem.attackRoom === undefined)  cMem.attackRoom = room.name;
+    if (cMem.disableAI    === undefined) cMem.disableAI   = false;
+    if (cMem.attackRoom   === undefined) cMem.attackRoom  = rMem.data.attackRoom || room.name;
+    if (cMem.rallyPoint   === undefined) cMem.rallyPoint  = 'none';
+    if (cMem.customTarget === undefined && rMem.data.customAttackTarget !== undefined)
+        cMem.customTarget = rMem.data.customAttackTarget;
 
     if (!cMem.disableAI) {
 
       if (cMem.rallyPoint == 'none') {
 
-        if (creep.ticksToLive <= 2) creep.say('☠️');
-        if (room.name !== cMem.attackRoom) creep.moveTo(Game.flags.Attack);
+        if (creep.ticksToLive <= 2)  creep.say('☠️');
 
         if      (pos.x == 49) creep.move(LEFT   );
         else if (pos.x == 0 ) creep.move(RIGHT  );
         else if (pos.y == 49) creep.move(TOP    );
         else if (pos.y == 0 ) creep.move(BOTTOM );
 
-        const hostiles = room.find(FIND_HOSTILE_CREEPS);
-        const target = pos.findClosestByRange(hostiles);
-
-        if (target) {
-          if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
-            creep.moveTo(target, pathing.rangerPathing);
+        if (cMem.customTarget) {
+          if (room.name !== cMem.attackRoom)
+            creep.moveTo(Game.flags[cMem.attackRoom], pathing.warriorPathing);
+          else {
+          const cAT: AnyStructure = Game.getObjectById(cMem.customTarget)
+            if (creep.rangedAttack(cAT) === ERR_NOT_IN_RANGE)
+              creep.moveTo(cAT, pathing.rangerPathing);
+          }
         } else {
+          if (room.name !== cMem.attackRoom) {
+            creep.moveTo(Game.flags[cMem.attackRoom], pathing.rangerPathing);
+          } else {
+            const towers = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
 
-          let structures = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_TOWER } });
+            if (towers.length) {
+              const target = pos.findClosestByRange(towers);
+              if (target) {
+                if (creep.rangedAttack(target) === ERR_NOT_IN_RANGE)
+                  creep.moveTo(target, pathing.rangerPathing);
+                else
+                  creep.moveTo(target, pathing.rangerPathing);
+              } else {
+                const spawns = room.find(FIND_HOSTILE_STRUCTURES, { filter: { structureType: STRUCTURE_SPAWN } });
 
-          if (!structures) structures = room.find(FIND_HOSTILE_STRUCTURES);
+                if (spawns.length) {
+                  const target = pos.findClosestByRange(spawns);
+                  if (target) {
+                    if (creep.rangedAttack(target) === ERR_NOT_IN_RANGE) {
+                      const nearbyCreeps = pos.findInRange(FIND_HOSTILE_CREEPS, 3);
+                      creep.moveTo(target, pathing.rangerPathing);
+                      if (nearbyCreeps.length)
+                        creep.rangedMassAttack();
+                    }
+                  } else {
+                    const hostiles = room.find(FIND_HOSTILE_CREEPS);
+                    const target = pos.findClosestByRange(hostiles);
 
-          const target = pos.findClosestByRange(structures);
-
-          if (target) {
-            if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
-              creep.moveTo(target, pathing.invaderPathing);
+                    if (target) {
+                      if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
+                        creep.moveTo(target, pathing.rangerPathing);
+                    } else {
+                      const structures = room.find(FIND_HOSTILE_STRUCTURES);
+                      const target = pos.findClosestByRange(structures);
+                      if (target) {
+                        if (creep.getActiveBodyparts(WORK) > 0) {
+                          if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
+                            creep.moveTo(target, pathing.warriorPathing);
+                        } else {
+                          if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
+                            creep.moveTo(target, pathing.rangerPathing);
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleRebooter = {
@@ -1204,14 +1214,10 @@ export const roleRebooter = {
               creep.moveTo(target, pathing.rebooterPathing);
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleRemoteBuilder = {
@@ -1224,12 +1230,11 @@ export const roleRemoteBuilder = {
     const rMem:  RoomMemory    = room.memory;
     const pos :  RoomPosition  = creep.pos;
     const workRoom = rMem.data.remoteWorkRoom;
-    //const remoteLogs = Memory.rooms[cMem.homeRoom].data.remoteLogistics[workRoom];
 
     if (cMem.initialTravelDone === undefined) cMem.initialTravelDone = false;
     if (cMem.disableAI === undefined) cMem.disableAI = false;
     if (cMem.workRoom === undefined) { if (rMem.data.remoteWorkRoom) cMem.workRoom = rMem.data.remoteWorkRoom; }
-    if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';//remoteLogs.waypoints;
+    if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
 
     if (!cMem.disableAI) {
 
@@ -1242,10 +1247,10 @@ export const roleRemoteBuilder = {
         else if (pos.y == 49) creep.move(TOP    );
         else if (pos.y == 0 ) creep.move(BOTTOM );
 
-        //: create RoomPosition of remote target for travel
+        //* create RoomPosition of remote target for travel
         const workPos = new RoomPosition(25, 25, cMem.workRoom);
 
-        //: if not in workRoom, travel to workRoom RoomPosition
+        //* if not in workRoom, travel to workRoom RoomPosition
         if (room.name !== cMem.workRoom) creep.moveTo(workPos, pathing.remoteBuilderPathing);
         else {
           if (creep.store[RESOURCE_ENERGY] == 0) creep.say('🔼');
@@ -1281,22 +1286,17 @@ export const roleRemoteBuilder = {
               }
             }
           } else if (creep.store.getUsedCapacity() > 0) {
-            let targets = room.find(FIND_MY_CONSTRUCTION_SITES);
+            const targets = room.find(FIND_MY_CONSTRUCTION_SITES);
             if (targets.length) {
-              //targets = pos.findClosestByRange(targets);
               if (creep.build(targets[0]) == ERR_NOT_IN_RANGE)
                 creep.moveTo(targets[0], pathing.remoteBuilderPathing);
             }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 };
 export const roleRemoteGuard = {
@@ -1331,21 +1331,17 @@ export const roleRemoteGuard = {
           const hostiles = room.find(FIND_HOSTILE_CREEPS);
           if (hostiles.length > 0) {
             const target = pos.findClosestByRange(hostiles);
-            if (creep.attack(target) == ERR_NOT_IN_RANGE)
+            if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
               creep.moveTo(target, pathing.remoteGuardPathing);
           } else {
             if (!pos.isNearTo(Game.flags[outpostRoom]))
               creep.moveTo(Game.flags[outpostRoom], pathing.remoteGuardPathing);
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleRemoteHarvester = {
@@ -1408,14 +1404,10 @@ export const roleRemoteHarvester = {
             }
           } else creep.harvestEnergy();
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleRemoteLogistician = {
@@ -1459,8 +1451,8 @@ export const roleRemoteLogistician = {
           else if (pos.y == 49) creep.move(TOP);
           else if (pos.y == 0) creep.move(BOTTOM);
 
-          if (creep.store.getUsedCapacity(RESOURCE_ENERGY) == 0) { //: I have no energy
-            //: Search local room for dropped resources, excluding any that the creep created
+          if (creep.store.getUsedCapacity(RESOURCE_ENERGY) == 0) { //: I HAVE NO ENERGY
+            //* Search local room for dropped resources, excluding any that the creep created
             if (cMem.customTarget) {
               const cTarget: AnyStructure = Game.getObjectById(cMem.customTarget);
 
@@ -1477,7 +1469,7 @@ export const roleRemoteLogistician = {
                 if (creep.pickup(droppedPiles[ 0 ]) === ERR_NOT_IN_RANGE)
                   creep.moveTo(droppedPiles[ 0 ], pathing.remoteLogisticianPathing);
               } else {
-                //: No dropped resources, if we're at home room just fill from storage (typically at spawn time)
+                //* No dropped resources, if we're at home room just fill from storage (typically at spawn time)
                 if (creep.room.name === cMem.homeRoom) {
                   const homeStorage: StructureStorage = Game.getObjectById(cMem.storage);
                   if (homeStorage) {
@@ -1487,11 +1479,11 @@ export const roleRemoteLogistician = {
                 }
               }
             }
-          } else { //: I have energy
-            //: Go to target room position from memory
+          } else { //: I HAVE ENERGY
+            //* Go to target room position from memory
             const targetPosition = new RoomPosition(cMem.destPos[ 0 ], cMem.destPos[ 1 ], cMem.destRoom);
             if (pos.isEqualTo(targetPosition)) {
-              //: When there, transfer energy (to creeps, or to container, or just dump it on the ground)
+              //* When there, transfer energy (to creeps, or to container, or just dump it on the ground)
               const workerCreeps = pos.findInRange(FIND_MY_CREEPS, 3, { filter: (i) => i.getActiveBodyparts(WORK) > 0 });
               if (workerCreeps.length > 0) {
                 const result = creep.transfer(workerCreeps[ 0 ], RESOURCE_ENERGY);
@@ -1512,18 +1504,14 @@ export const roleRemoteLogistician = {
                   }
                 }
               }
-            } else //: If the creep is not at the target position, move towards it
+            } else //* If the creep is not at the target position, move towards it
               creep.moveTo(targetPosition, pathing.remoteLogisticianPathing);
           } //: end of primary logic
-        } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
-          navRallyPoint(creep);
-        }
+        } else //: I HAVE A RALLY POINT, LET'S BOOGY!
+        navRallyPoint(creep);
       }
-    } else { //: MY AI IS DISABLED, DURRRRR..... *drools*
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 };
 export const roleRemoteRunner = {
@@ -1598,14 +1586,10 @@ export const roleRemoteRunner = {
             }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleRepairer = {
@@ -1746,14 +1730,10 @@ export const roleRepairer = {
             }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleReserver = {
@@ -1790,7 +1770,7 @@ export const roleReserver = {
 
         if (cMem.controllerAttack !== undefined && cMem.controllerAttack === true) {
           if (room.name === cMem.controllerAttack) {
-            const result = creep.attackController(room.controller);
+            const result = creep.rangedAttackController(room.controller);
             switch (result) {
               case OK:
                 if (room.controller.upgradeBlocked) {
@@ -1821,7 +1801,7 @@ export const roleReserver = {
                 creep.moveTo(room.controller, pathing.reserverPathing);
             } else if (typeof Game.rooms[ room.name ].controller.owner === 'object') {
               if (Game.rooms[ room.name ].controller.owner.username !== 'randomencounter') {
-                if (creep.attackController(room.controller) == ERR_NOT_IN_RANGE)
+                if (creep.rangedAttackController(room.controller) == ERR_NOT_IN_RANGE)
                   creep.moveTo(room.controller, pathing.reserverPathing);
               }
             }
@@ -1832,14 +1812,10 @@ export const roleReserver = {
               creep.moveTo(Game.flags[ cMem.targetRoom ], pathing.reserverPathing);
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleRunner = {
@@ -1903,14 +1879,10 @@ export const roleRunner = {
             }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 export const roleScientist = {
@@ -1986,14 +1958,10 @@ export const roleScientist = {
             }
           }
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 };
 export const roleScout = {
@@ -2045,14 +2013,10 @@ export const roleScout = {
           else if (room.name !== cMem.targetRoom)
             creep.moveTo(goToPos, pathing.scoutPathing);
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    }  else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 };
 export const roleUpgrader = {
@@ -2170,9 +2134,8 @@ export const roleUpgrader = {
           if (creep.upgradeController(room.controller) === ERR_NOT_IN_RANGE)
             creep.moveTo(room.controller, pathing.upgraderPathing);
         }
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
     }  else { //: AI IS DISABLED
       if (!Memory.globalSettings.alertDisabled)
         console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
@@ -2208,9 +2171,13 @@ export const roleWarrior = {
         else if (pos.y == 0 ) creep.move(BOTTOM );
 
         if (cMem.customTarget) {
+          if (room.name !== cMem.attackRoom)
+            creep.moveTo(Game.flags[cMem.attackRoom], pathing.warriorPathing);
+          else {
           const cAT: AnyStructure = Game.getObjectById(cMem.customTarget)
-            if (creep.dismantle(cAT) == ERR_NOT_IN_RANGE || creep.attack(cAT) == ERR_NOT_IN_RANGE)
+            if (creep.dismantle(cAT) == ERR_NOT_IN_RANGE || creep.rangedAttack(cAT) == ERR_NOT_IN_RANGE)
               creep.moveTo(cAT, pathing.warriorPathing);
+          }
         } else {
           if (room.name !== cMem.attackRoom) {
             creep.moveTo(Game.flags[cMem.attackRoom], pathing.warriorPathing);
@@ -2223,7 +2190,7 @@ export const roleWarrior = {
                 if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
                   creep.moveTo(target, pathing.warriorPathing);
               } else {
-                if (creep.attack(target) == ERR_NOT_IN_RANGE)
+                if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
                   creep.moveTo(target, pathing.warriorPathing);
               }
             } else {
@@ -2234,13 +2201,13 @@ export const roleWarrior = {
                 const nearbyCreeps = pos.findInRange(FIND_HOSTILE_CREEPS, 1);
                 if (nearbyCreeps.length) {
                   if (pos.isNearTo(nearbyCreeps[0]))
-                    creep.attack(nearbyCreeps[ 0 ]);
+                    creep.rangedAttack(nearbyCreeps[ 0 ]);
                 }
                 if (creep.getActiveBodyparts(WORK) > 0) {
                   if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
                     creep.moveTo(target, pathing.warriorPathing);
                 } else {
-                  if (creep.attack(target) == ERR_NOT_IN_RANGE)
+                  if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
                     creep.moveTo(target, pathing.warriorPathing);
                 }
               } else {
@@ -2248,7 +2215,7 @@ export const roleWarrior = {
                 const target = pos.findClosestByRange(hostiles);
 
                 if (target) {
-                  if (creep.attack(target) == ERR_NOT_IN_RANGE)
+                  if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
                     creep.moveTo(target, pathing.warriorPathing);
                 } else {
                   const structures = room.find(FIND_HOSTILE_STRUCTURES);
@@ -2258,13 +2225,13 @@ export const roleWarrior = {
                       if (creep.dismantle(target) == ERR_NOT_IN_RANGE)
                         creep.moveTo(target, pathing.warriorPathing);
                     } else {
-                      if (creep.attack(target) == ERR_NOT_IN_RANGE)
+                      if (creep.rangedAttack(target) == ERR_NOT_IN_RANGE)
                         creep.moveTo(target, pathing.warriorPathing);
                     }
                   } else if (creep.getActiveBodyparts(CLAIM) > 0) {
                     const controller = room.controller;
 
-                    if (creep.attackController(controller) == ERR_NOT_IN_RANGE)
+                    if (creep.rangedAttackController(controller) == ERR_NOT_IN_RANGE)
                       creep.moveTo(controller, pathing.warriorPathing);
                   }
                 }
@@ -2275,14 +2242,10 @@ export const roleWarrior = {
         const musterFlag = cMem.squad + '-muster';
         if (!pos.isNearTo(Game.flags[musterFlag]))
           creep.moveTo(Game.flags[musterFlag], pathing.warriorPathing);
-      } else { //: I HAVE A RALLY POINT, LET'S BOOGY!
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
-      }
-    } else {
-      if (!Memory.globalSettings.alertDisabled)
-        console.log('[' + room.name + ']: WARNING: Creep ' + creep.name + '\'s AI is disabled.');
-      creep.say('💤');
-    }
+    } else //: AI DISABLED ALERT
+      aiAlert(creep);
   }
 }
 
@@ -2437,4 +2400,11 @@ function navRallyPoint(creep: Creep): void {
     }
     else creep.moveTo(rally, pathing.rallyPointPathing);
   }
+}
+
+function aiAlert(creep: Creep): void {
+  if (!Memory.globalSettings.alertDisabled)
+    console.log(creep.room.link() + 'WARNING: Creep ' + creep.name + '\'s AI is disabled.');
+  creep.say('💤');
+  return;
 }
