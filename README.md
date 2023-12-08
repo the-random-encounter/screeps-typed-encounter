@@ -1,14 +1,8 @@
----
-description: >-
-  Here  you will find a description of the bot, it's behaviors, and information
-  on how to use the bot yourself.
----
-
 # Overview
 
 ## Introduction
 
-**Random Encounter Bot** (REB) is a Screeps bot developed by [Random Encounter](https://github.com/the-random-encounter), initially in JavaScript and later converted to TypeScript. The project began in October 2023, as Random Encounter's second large JavaScript project, having written \~5,000 lines for a custom interactive Twitch [chatbot ](https://www.github.com/the-random-encounter/chatbot)([Git repo](https://github.com/the-random-encounter/randomencounterbot.git)) to use on his DJ livestreaming channel.
+**Random Encounter Bot** (REB) is a Screeps bot developed by [Random Encounter](https://github.com/the-random-encounter), initially in JavaScript and later converted to TypeScript. The project began in October 2023, as Random Encounter's second large JavaScript project, having written \~5,000 lines for a custom interactive Twitch [chatbot](https://www.github.com/the-random-encounter/chatbot) ([Git repo](https://github.com/the-random-encounter/randomencounterbot.git)) to use on his DJ livestreaming channel.
 
 ## Installation
 
@@ -18,7 +12,7 @@ Download either a [release package](https://github.com/the-random-encounter/scre
 \
 Open the folder in your terminal and run your package manager to install the required packages and TypeScript declaration files:
 
-```
+```bash
 # npm
 npm install
 
@@ -26,7 +20,7 @@ npm install
 yarn
 ```
 
-#### Rollup and code upload
+## Rollup and code upload
 
 Random TypeBot uses rollup to compile typescript and upload it to a screeps branch on a server.
 
@@ -54,7 +48,13 @@ Finally, there are also NPM scripts that serve as aliases for these commands in 
 
 `npm run watch-sim` is equivalent to `rollup -cw --dest sim`.
 
+## Current Destinations
+
+1. MAIN
+2. PSERVER
+3. PTR
+4. DEV
+5. SIM
+6. SEASON
+
 **Important! To upload code to a private server, you must have** [**screepsmod-auth**](https://github.com/ScreepsMods/screepsmod-auth) **installed and configured!**
-
-
-
