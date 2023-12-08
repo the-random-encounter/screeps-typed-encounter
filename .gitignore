@@ -34,8 +34,11 @@ screeps.json
 src/blueprints.json
 src/manager.ts
 
+/.vscode/settings.json
+/.vsocde/extensions.json
+
 # Editor folders
-.vscode/
+/.vscode
 .vscode
 .eslintrc.js
 .editorconfig
