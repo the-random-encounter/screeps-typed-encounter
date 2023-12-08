@@ -13,236 +13,6 @@ import 'prototypes/roomFunctions';
 import 'prototypes/roomPositionFunctions';
 import 'prototypes/spawnFunctions';
 
-
-// PURPOSE define pre-configured creep bodypart arrays as key/value pairs in an object
-const spawnVariants: {[key: string]: Array<BodyPartConstant>} = {
-  'harvester150':    [ MOVE , WORK ],
-  'harvester250':    [ MOVE , WORK , WORK ],
-  'harvester350':    [ MOVE , WORK , WORK , WORK ],
-  'harvester400':    [ MOVE , MOVE , WORK , WORK , WORK ],
-  'harvester450':    [ MOVE , WORK , WORK , WORK , WORK ],
-  'harvester550':    [ MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'harvester650':    [ MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'harvester800':    [ MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'collector100':    [ CARRY, MOVE ],
-  'collector300':    [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE ],
-  'collector400':    [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE ],
-  'collector500':    [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'collector800':    [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE ],
-  'collector1000':   [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'upgrader300':     [ CARRY, MOVE , WORK , WORK ],
-  'upgrader350':     [ CARRY, MOVE , MOVE , WORK , WORK ],
-  'upgrader400':     [ CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
-  'upgrader500':     [ CARRY, MOVE , WORK , WORK , WORK , WORK ],
-  'upgrader550':     [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK ],
-  'upgrader700':     [ CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'upgrader900':     [ CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK  ],
-  'builder300':      [ CARRY, CARRY, MOVE , MOVE , WORK ],
-  'builder350':      [ CARRY, CARRY, MOVE , MOVE , MOVE , WORK ],
-  'builder400':      [ CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
-  'builder500':      [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
-  'builder600':      [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK ],
-  'builder700':      [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK ],
-  'builder800':      [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'builder1000':     [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'builder1100':     [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'builder1600':     [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'repairer300':     [ CARRY, MOVE , WORK , WORK ],
-  'repairer500':     [ CARRY, CARRY, MOVE , MOVE , WORK , WORK , WORK ],
-  'repairer600':     [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK ],
-  'repairer800':     [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK] ,
-  'repairer1000':    [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'repairer1400':    [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'runner300':       [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE ],
-  'runner500':       [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'runner800':       [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'crane300':        [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE ],
-  'crane500':        [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE ],
-  'crane800':        [ CARRY, CARRY, CARRY, CARRY, WORK , WORK , WORK , WORK , WORK , MOVE , MOVE ],
-  'warrior520':      [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , ATTACK, ATTACK, ATTACK, ATTACK ],
-  'warrior1400':     [ TOUGH, TOUGH, TOUGH , TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK ],
-  'healer1200':      [ TOUGH , TOUGH , TOUGH , TOUGH , TOUGH , MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, HEAL, HEAL, HEAL ],
-  'remoteGuard700':  [ TOUGH , TOUGH , TOUGH , TOUGH , TOUGH , MOVE, MOVE, MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK ],
-  'remoteLogi1200':  [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY,MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE ],
-  'remoteLogi1500': [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE ],
-  'reserver650':    [ MOVE, CLAIM ],
-  'reserver1300':   [ MOVE, MOVE, CLAIM, CLAIM ]
-}
-
-// PURPOSE define working variant set for use in the main loop, assigned based on current energy capacity limits
-let availableVariants:{[key: string]: Array<BodyPartConstant>} = {
-  'harvester':   [],
-  'collector':   [],
-  'upgrader':    [],
-  'builder':     [],
-  'repairer':    [],
-  'runner':      [],
-  'warrior':     [],
-  'crane':       [],
-  'remoteGuard': [],
-  'remoteLogi':  [],
-  'reserver':    [],
-}
-
-// PURPOSE declare creep counting integers for spawning purposes
-let builderCount:   number = 1;
-let claimerCount:   number = 1;
-let collectorCount: number = 1;
-let craneCount:     number = 1;
-let harvesterCount: number = 1;
-let healerCount:    number = 1;
-let invaderCount:   number = 1;
-let minerCount:     number = 1;
-let providerCount:  number = 1;
-let rangerCount:    number = 1;
-let rebooterCount:  number = 1;
-let repairerCount:  number = 1;
-let reserverCount:  number = 1;
-let runnerCount:    number = 1;
-let scientistCount: number = 1;
-let scoutCount:     number = 1;
-let upgraderCount:  number = 1;
-let warriorCount:   number = 1;
-
-let remoteBuilderCount:     number = 1;
-let remoteGuardCount:       number = 1;
-let remoteHarvesterCount:   number = 1;
-let remoteLogisticianCount: number = 1;
-let remoteRunnerCount:      number = 1;
-
-// PURPOSE declare other global variables
-let tickCount:            number  = 0;
-let newName:              string  = '';
-let spawnAnnounced:       boolean = false;
-let harvesterDying:       boolean = false;
-let runnerDying:          boolean = false;
-let reserverDying:        boolean = false;
-let collectorDying:       boolean = false;
-let remoteHarvesterDying: boolean = false;
-let remoteGuardDying:     boolean = false;
-let minerDying:           boolean = false;
-
-// PURPOSE initialize top level Memory objects if needed
-if (Memory.miscData === undefined)
-  Memory.miscData = {
-  'containerCounter':     0,
-  'outpostRoomCounter':   0,
-  'outpostSourceCounter': 0,
-  'outpostCounter':       0,
-  'rooms': {
-    'W5N43': {}
-    }
-  };
-
-if (Memory.globalSettings === undefined || Memory.globalSettings.creepSettings === undefined) {
-  const globalSettings: GlobalSettings = {
-    consoleSpawnInterval: 25,
-    alertDisabled: true,
-    reusePathValue: 5,
-    ignoreCreeps: true,
-    creepSettings: {
-      builder: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      claimer: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      collector: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      crane: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      harvester: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      healer: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      invader: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      miner: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      provider: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      ranger: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      rebooter: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remotebuilder: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remoteguard: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remoteharvester: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remotelogistician: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remoterunner: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      repairer: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      reserver: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      runner: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      scientist: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      scout: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      upgrader: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      warrior: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      }
-    }
-  };
-  Memory.globalSettings = globalSettings;
-}
-
-if (Memory.colonies === undefined) {
-  const colonies: Colonies = { colonyList: [], registry: {} };
-  Memory.colonies = colonies;
-}
-
 // PURPOSE start of TypeScript interface & type declarations
 declare global {
 
@@ -364,23 +134,24 @@ declare global {
 
   // * INTERFACES FOR IMPLEMENTING ADDITIONAL NATIVE GAME OBJECT PROTOTYPE FUNCTIONS
   interface Creep { // * ADDITIONAL CREEP OBJECT FUNCTIONS & PROPERTIES
-    [key: string]:        any;
-    findEnergySource():   Source | false;
-    AHS(no?: boolean):    Source;
+    [key: string]:                                    any;
+    findEnergySource():                               Source | false;
+    AHS(no?: boolean):                                Source;
     assignHarvestSource(noIncrement?: boolean):       Source;
     assignRemoteHarvestSource(noIncrement?: boolean): Source;
-    unloadEnergy(): void;
-    harvestEnergy(): void;
-    getDroppedResource(pileID: Id<Resource>): void;
-    pickupClosestEnergy(): void;
-    unloadMineral(): void;
-    harvestMineral(): void;
-    moveBySerializedPath(serializedPath: string): void;
-    recursivePathMove(serializedPath: string, stepNum: number): void;
-    disable(): true;
-    enable(): false;
+    unloadEnergy():                                   void;
+    harvestEnergy():                                  void;
+    getDroppedResource(pileID: Id<Resource>):         void;
+    pickupClosestEnergy():                            void;
+    unloadMineral():                                  void;
+    harvestMineral():                                 void;
+    moveBySerializedPath(serializedPath: string):     void;
+    recursivePathMove(serializedPath: string,
+                      stepNum: number):               void;
+    disable():                                        true;
+    enable():                                         false;
     getBoost(compound: MineralCompoundConstant, sourceLab: Id<StructureLab>, numParts: number): boolean;
-    assignOutbox(noIncrement?: boolean): StructureContainer;
+    assignOutbox(noIncrement?: boolean):              StructureContainer;
     assignInbox(noIncrement?: boolean):               StructureContainer;
     assignLogisticalPair(logParam?: number):          boolean;
     assignLogisticalPair():                           boolean;
@@ -388,114 +159,127 @@ declare global {
     targetPile(pileID: Id<Resource>):                 void;
   }
   interface Room { // * ADDITIONAL ROOM OBJECT FUNCTIONS
-    clearPPT  ():                                   void;
-    enableCSL ():                                   void;
-    disableCSL():                                   void;
-    toggleCSL ():                                   void;
-    setAttackRoom(roomName: string):                void;
+    clearPPT  ():                                     void;
+    enableCSL ():                                     void;
+    disableCSL():                                       void;
+    toggleCSL ():                                     void;
+    setAttackRoom(roomName: string):                  void;
     setCustomAttackTarget(
-      attackTarget: Id<Structure>):                 void;
-    getInboxes():                                   Id<StructureContainer>[];
-    getOutboxes():                                  Id<StructureContainer>[];
+      attackTarget: Id<Structure>):                   void;
+    getInboxes():                                     Id<StructureContainer>[];
+    getOutboxes():                                    Id<StructureContainer>[];
     setQuota(roleTarget:  CreepRoles,
-             newTarget:   number    ):              void;
-    cacheObjects():                                 void;
-    initTargets(array:    number[]  ):              void;
+             newTarget:   number    ):                void;
+    cacheObjects():                                   void;
+    initTargets(array:    number[]  ):                void;
     setTarget(roleTarget: CreepRoles,
-              newTarget:  number    ):              void;
-    sendEnergy():                                   void;
-    initRoom():                                     void;
-    initTargets(targetArray?: number[] | false):    void;
-    initFlags():                                    void;
-    setRoomFlags(flags: boolean[]):                 void;
-    initSettings():                                 void;
-    registerLogisticalPairs():                      void;
-    setRepairRampartsTo(percentMax:   number  ):    void;
-    setRepairWallsTo(percentMax:      number  ):    void;
+              newTarget:  number    ):                void;
+    sendEnergy():                                     void;
+    initRoom():                                       void;
+    initTargets(targetArray?: number[] |
+                              false):                 void;
+    initFlags():                                      void;
+    setRoomFlags(flags: boolean[]):                   void;
+    initSettings():                                   void;
+    registerLogisticalPairs():                        void;
+    setRepairRampartsTo(percentMax:   number  ):      void;
+    setRepairWallsTo(percentMax:      number  ):      void;
     setRoomSettings(repairToArray:    number[],
-                    labSettingsArray: string[]):    void;
+                    labSettingsArray: string[]):      void;
     setInbox(
-      boxID: Id<StructureContainer>): void;
+      boxID: Id<StructureContainer>):                 void;
     setOutbox(
-      boxID: Id<StructureContainer>): void;
+      boxID: Id<StructureContainer>):                 void;
     checkInbox(
-      boxID: Id<StructureContainer>): boolean;
+      boxID: Id<StructureContainer>):                 boolean;
     checkOutbox(
-      boxID: Id<StructureContainer>): boolean;
+      boxID: Id<StructureContainer>):                 boolean;
     enableFlag( flag:   string  ,
-          initIfNull:   boolean):     void;
+          initIfNull:   boolean):                     void;
     disableFlag(flag:   string  ,
-          initIfNull:   boolean):     void;
+          initIfNull:   boolean):                     void;
     toggleFlag( flag:   string  ,
           initIfNull:   boolean ,
-        defaultValue:   boolean):     void;
-    clearRCLCounter():                void;
-    enableDisplayUpgradeRange():      true;
+        defaultValue:   boolean):                     void;
+    clearRCLCounter():                                void;
+    enableDisplayUpgradeRange():                      true;
     enableBoostCreeps(
-      dontScience: boolean):          void;
+      dontScience: boolean):                          void;
     toggleBoostCreeps(
-      dontScience: boolean):          void;
-    disableBoostCreeps():             void;
-    enableCentralStorageLogic():      void;
-    enableCraneUpgrades():            void;
-    enableDoScience():                void;
-    enableTowerRepairBasic():         void;
-    enableTowerRepairDefenses():      void;
-    enableRunnersDoMinerals():        void;
-    enableRepairWalls():              void;
-    enableRepairRamparts():           void;
-    disableCentralStorageLogic():     void;
-    disableCraneUpgrades():           void;
-    disableDoScience():               void;
-    disableTowerRepairBasic():        void;
-    disableTowerRepairDefenses():     void;
-    disableRunnersDoMinerals():       void;
-    disableRepairWalls():             void;
-    toggleRunnersDoMinerals():        void;
-    toggleTowerRepairDefenses():      void;
-    toggleTowerRepairBasic():         void;
-    toggleDoScience():                void;
-    toggleCraneUpgrades():            void;
-    toggleCentralStorageLogic():      void;
-    toggleRepairWalls():              void;
-    disableRepairRamparts():          void;
-    toggleRepairRamparts():           void;
-    enableRepairBasics():             void;
-    disableRepairBasics():            void;
-    toggleRepairBasics():             void;
-    enableSortConSites():             void;
-    disableSortConSites():            void;
-    toggleSortConSites():             void;
-    calcLabReaction():                MineralCompoundConstant;
-    setSquad(squadName: string):      void;
+      dontScience: boolean):                          void;
+    disableBoostCreeps():                             void;
+    enableCentralStorageLogic():                      void;
+    enableCraneUpgrades():                            void;
+    enableDoScience():                                void;
+    enableTowerRepairBasic():                         void;
+    enableTowerRepairDefenses():                      void;
+    enableRunnersDoMinerals():                        void;
+    enableRepairWalls():                              void;
+    enableRepairRamparts():                           void;
+    disableCentralStorageLogic():                     void;
+    disableCraneUpgrades():                           void;
+    disableDoScience():                               void;
+    disableTowerRepairBasic():                        void;
+    disableTowerRepairDefenses():                     void;
+    disableRunnersDoMinerals():                       void;
+    disableRepairWalls():                             void;
+    toggleRunnersDoMinerals():                        void;
+    toggleTowerRepairDefenses():                      void;
+    toggleTowerRepairBasic():                         void;
+    toggleDoScience():                                void;
+    toggleCraneUpgrades():                            void;
+    toggleCentralStorageLogic():                      void;
+    toggleRepairWalls():                              void;
+    disableRepairRamparts():                          void;
+    toggleRepairRamparts():                           void;
+    enableRepairBasics():                             void;
+    disableRepairBasics():                            void;
+    toggleRepairBasics():                             void;
+    enableSortConSites():                             void;
+    disableSortConSites():                            void;
+    toggleSortConSites():                             void;
+    calcLabReaction():                                MineralCompoundConstant;
+    setSquad(squadName: string):                      void;
     setMusterPoint(
       squadName: string,
       posArray: number[],
-      roomName: RoomName | false):    void;
+      roomName: RoomName |
+                false):                               void;
     registerOutpost(
-      roomName: string | number):     boolean;
+      roomName: string |
+                number):                              boolean;
     registerOutpostContainers(
-      outpostName: string):           void;
-    calcOutpostPotential():           void;
+      outpostName: string):                           void;
+    calcOutpostPotential():                           void;
     registerLinks(): void;
     registerInvaderGroup(
-      rallyPoint: string | string[],
+      rallyPoint: string |
+                  string[],
       targetRoom: RoomName,
       groupSize: number,
-      groupRoles: string[]):          void;
+      groupRoles: string[]):                          void;
     setCraneSpot(
       posX: number,
-      posY: number):                  void;
+      posY: number):                                  void;
     setRemoteTargets(
       roomName: RoomName,
       roomXY: number[],
-      waypoints: string | string[] | false,
+      waypoints: string   |
+                 string[] |
+                 false,
       rbCount: number,
       rlCount: number,
-      claimRoom: RoomName | false,
-      override: boolean):             void;
-    link():                           void;
-    findRemoteLinks():                void;
+      claimRoom: RoomName |
+                 false,
+      override: boolean):                             void;
+    link():                                           void;
+    findRemoteLinks():                                void;
+    setCombatObjectives(
+      attackRoom: RoomName,
+      waypoints: string | string[],
+      customTarget: Id<AnyStructure> |
+                    Id<AnyStructure>[] |
+                    false):                           boolean;
   }
   interface RoomPosition { // * ADDITIONAL ROOMPOSITION OBJECT FUNCTIONS
     getNearbyPositions():   Array<RoomPosition>;
@@ -520,7 +304,7 @@ declare global {
       creepName: string,
       targetRoom: RoomName,
       waypoints: string | string[] | 'none',
-      maxEnergy: number | false ):   void;
+      maxEnergy: number | false ):   ScreepsReturnCode;
     spawnHarvester(
       targetRoom: RoomName,
       name:        string       ):   void;
@@ -708,8 +492,8 @@ declare global {
     controllerAttack?:    Id<StructureController>;
   }
   interface CombatObjective {
-    targetRoom?:          RoomName;
-    customAttackTargets?: Id<AnyStructure>[];
+    attackRoom?:          RoomName;
+    customAttackTargets?: Id<AnyStructure> | Id<AnyStructure>[] | false;
     squads?:              string[];
     waypoints?:           string | string[];
     invaderGroupSize?:    number;
@@ -961,6 +745,242 @@ declare global {
   }
 }
 
+// PURPOSE define pre-configured creep bodypart arrays as key/value pairs in an object
+const spawnVariants: {[key: string]: Array<BodyPartConstant>} = {
+  'harvester150':    [ MOVE , WORK ],
+  'harvester250':    [ MOVE , WORK , WORK ],
+  'harvester350':    [ MOVE , WORK , WORK , WORK ],
+  'harvester400':    [ MOVE , MOVE , WORK , WORK , WORK ],
+  'harvester450':    [ MOVE , WORK , WORK , WORK , WORK ],
+  'harvester550':    [ MOVE , WORK , WORK , WORK , WORK , WORK ],
+  'harvester650':    [ MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
+  'harvester800':    [ MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
+  'collector100':    [ CARRY, MOVE ],
+  'collector300':    [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE ],
+  'collector400':    [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE ],
+  'collector500':    [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
+  'collector800':    [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE ],
+  'collector1000':   [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
+  'upgrader300':     [ CARRY, MOVE , WORK , WORK ],
+  'upgrader350':     [ CARRY, MOVE , MOVE , WORK , WORK ],
+  'upgrader400':     [ CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
+  'upgrader500':     [ CARRY, MOVE , WORK , WORK , WORK , WORK ],
+  'upgrader550':     [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK ],
+  'upgrader700':     [ CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
+  'upgrader900':     [ CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK  ],
+  'upgrader1000':    [ CARRY, CARRY, MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK , WORK ],
+  'builder300':      [ CARRY, CARRY, MOVE , MOVE , WORK ],
+  'builder350':      [ CARRY, CARRY, MOVE , MOVE , MOVE , WORK ],
+  'builder400':      [ CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
+  'builder500':      [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
+  'builder600':      [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK ],
+  'builder700':      [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK ],
+  'builder800':      [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
+  'builder1000':     [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
+  'builder1100':     [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
+  'builder1600':     [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
+  'repairer300':     [ CARRY, MOVE , WORK , WORK ],
+  'repairer500':     [ CARRY, CARRY, MOVE , MOVE , WORK , WORK , WORK ],
+  'repairer600':     [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK ],
+  'repairer800':     [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK] ,
+  'repairer1000':    [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
+  'repairer1400':    [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK ],
+  'runner300':       [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE ],
+  'runner500':       [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
+  'runner800':       [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
+  'crane300':        [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE ],
+  'crane500':        [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE ],
+  'crane800':        [ CARRY, CARRY, CARRY, CARRY, WORK , WORK , WORK , WORK , WORK , MOVE , MOVE ],
+  'ranger1800':      [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK ],
+  'warrior520':      [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , ATTACK, ATTACK, ATTACK, ATTACK ],
+  'warrior1400':     [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK ],
+  'warrior1800':     [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK ],
+  'healer1200':      [ MOVE , MOVE , MOVE , MOVE , HEAL, HEAL, HEAL, HEAL ],
+  'healer1800':      [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , HEAL, HEAL, HEAL, HEAL, HEAL, HEAL ],
+  'beef1500':        [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
+  'remoteGuard700':  [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , MOVE , MOVE , MOVE , ATTACK, ATTACK, ATTACK, ATTACK ],
+  'remoteLogi1200':  [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
+  'remoteLogi1500':  [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
+  'reserver650':     [ MOVE , CLAIM ],
+  'reserver1300':    [ MOVE , MOVE , CLAIM, CLAIM ],
+  'beast1800':       [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY ],
+  'pony1250':        [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ]
+}
+
+// PURPOSE define working variant set for use in the main loop, assigned based on current energy capacity limits
+let availableVariants:{[key: string]: Array<BodyPartConstant>} = {
+  'harvester':   [],
+  'collector':   [],
+  'upgrader':    [],
+  'builder':     [],
+  'repairer':    [],
+  'runner':      [],
+  'warrior':     [],
+  'crane':       [],
+  'remoteGuard': [],
+  'remoteLogi':  [],
+  'reserver':    [],
+}
+
+// PURPOSE declare creep counting integers for spawning purposes
+let builderCount:   number = 1;
+let claimerCount:   number = 1;
+let collectorCount: number = 1;
+let craneCount:     number = 1;
+let harvesterCount: number = 1;
+let healerCount:    number = 1;
+let invaderCount:   number = 1;
+let minerCount:     number = 1;
+let providerCount:  number = 1;
+let rangerCount:    number = 1;
+let rebooterCount:  number = 1;
+let repairerCount:  number = 1;
+let reserverCount:  number = 1;
+let runnerCount:    number = 1;
+let scientistCount: number = 1;
+let scoutCount:     number = 1;
+let upgraderCount:  number = 1;
+let warriorCount:   number = 1;
+
+let remoteBuilderCount:     number = 1;
+let remoteGuardCount:       number = 1;
+let remoteHarvesterCount:   number = 1;
+let remoteLogisticianCount: number = 1;
+let remoteRunnerCount:      number = 1;
+
+// PURPOSE declare other global variables
+let tickCount:            number  = 0;
+let newName:              string  = '';
+let spawnAnnounced:       boolean = false;
+let harvesterDying:       boolean = false;
+let runnerDying:          boolean = false;
+let reserverDying:        boolean = false;
+let collectorDying:       boolean = false;
+let remoteHarvesterDying: boolean = false;
+let remoteGuardDying:     boolean = false;
+let minerDying:           boolean = false;
+
+// PURPOSE initialize top level Memory objects if needed
+if (Memory.miscData === undefined)
+  Memory.miscData = {
+  'containerCounter':     0,
+  'outpostRoomCounter':   0,
+  'outpostSourceCounter': 0,
+  'outpostCounter':       0,
+  'rooms': {
+    'W5N43': {}
+    }
+  };
+
+if (Memory.globalSettings === undefined || Memory.globalSettings.creepSettings === undefined) {
+  const globalSettings: GlobalSettings = {
+    consoleSpawnInterval: 25,
+    alertDisabled: true,
+    reusePathValue: 5,
+    ignoreCreeps: true,
+    creepSettings: {
+      builder: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      claimer: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      collector: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      crane: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      harvester: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      healer: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      invader: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      miner: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      provider: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      ranger: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      rebooter: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remotebuilder: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remoteguard: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remoteharvester: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remotelogistician: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      remoterunner: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      repairer: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      reserver: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      runner: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      scientist: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      scout: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      upgrader: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      },
+      warrior: {
+        reusePathValue: 3,
+        ignoreCreeps: true
+      }
+    }
+  };
+  Memory.globalSettings = globalSettings;
+}
+
+if (Memory.colonies === undefined) {
+  const colonies: Colonies = { colonyList: [], registry: {} };
+  Memory.colonies = colonies;
+}
+
 //*  When compiling TS to JS and bundling with rollup,
 //*  the line numbers and file names in error messages change
 //*  Use the ErrorMapper.wrapLoop() to sync the error changes.
@@ -1100,7 +1120,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       if (cSite.progress > 0) buildProgress(cSite, room);
     });
 
-    //: code to run if room contains a controller owned by us
+    //: FOR ROOMS OWNED BY BOT
     if (room && room.controller && room.controller.my) {
 
       const data:     RoomData     = rMem.data;
@@ -1160,6 +1180,146 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
       // PURPOSE tower logic function
       roomDefense(room);
+
+      //: SPAWN VARIANT ALLOCATION
+      if (room.energyCapacityAvailable === 300) {
+        availableVariants.harvester    = spawnVariants.harvester250;
+        availableVariants.collector    = spawnVariants.collector100;
+        availableVariants.upgrader     = spawnVariants.upgrader300;
+        availableVariants.builder      = spawnVariants.builder300;
+        availableVariants.repairer     = spawnVariants.repairer300;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane300;
+      } else if (room.energyCapacityAvailable <= 350) {
+        availableVariants.harvester    = spawnVariants.harvester350;
+        availableVariants.collector    = spawnVariants.collector300;
+        availableVariants.upgrader     = spawnVariants.upgrader350;
+        availableVariants.builder      = spawnVariants.builder350;
+        availableVariants.repairer     = spawnVariants.repairer300;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane300;
+      } else if (room.energyCapacityAvailable <= 400) {
+        availableVariants.harvester    = spawnVariants.harvester400;
+        availableVariants.collector    = spawnVariants.collector300;
+        availableVariants.upgrader     = spawnVariants.upgrader400;
+        availableVariants.builder      = spawnVariants.builder350;
+        availableVariants.repairer     = spawnVariants.repairer300;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane300;
+      } else if (room.energyCapacityAvailable <= 500) {
+        availableVariants.harvester    = spawnVariants.harvester450;
+        availableVariants.collector    = spawnVariants.collector300;
+        availableVariants.upgrader     = spawnVariants.upgrader400;
+        availableVariants.builder      = spawnVariants.builder350;
+        availableVariants.repairer     = spawnVariants.repairer300;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane300;
+      } else if (room.energyCapacityAvailable <= 550) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector300;
+        availableVariants.upgrader     = spawnVariants.upgrader550;
+        availableVariants.builder      = spawnVariants.builder500;
+        availableVariants.repairer     = spawnVariants.repairer500;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.warrior      = spawnVariants.warrior520;
+        availableVariants.crane        = spawnVariants.crane500;
+      } else if (room.energyCapacityAvailable <= 600) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector300;
+        availableVariants.upgrader     = spawnVariants.upgrader550;
+        availableVariants.builder      = spawnVariants.builder500;
+        availableVariants.repairer     = spawnVariants.repairer500;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.warrior      = spawnVariants.warrior520;
+        availableVariants.crane        = spawnVariants.crane500;
+      } else if (room.energyCapacityAvailable <= 700) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector500;
+        availableVariants.upgrader     = spawnVariants.upgrader550;
+        availableVariants.builder      = spawnVariants.builder600;
+        availableVariants.repairer     = spawnVariants.repairer500;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+      } else if (room.energyCapacityAvailable <= 800) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector500;
+        availableVariants.upgrader     = spawnVariants.upgrader700;
+        availableVariants.builder      = spawnVariants.builder600;
+        availableVariants.repairer     = spawnVariants.repairer500;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.reserver     = spawnVariants.reserver650;
+      } else if (room.energyCapacityAvailable <= 900) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector500;
+        availableVariants.upgrader     = spawnVariants.upgrader800;
+        availableVariants.builder      = spawnVariants.builder700;
+        availableVariants.repairer     = spawnVariants.repairer600;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.reserver     = spawnVariants.reserver650;
+      } else if (room.energyCapacityAvailable <= 1000) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector500;
+        availableVariants.upgrader     = spawnVariants.upgrader700;
+        availableVariants.builder      = spawnVariants.builder800;
+        availableVariants.repairer     = spawnVariants.repairer800;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.reserver     = spawnVariants.reserver650;
+      } else if (room.energyCapacityAvailable <= 1250) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector500;
+        availableVariants.upgrader     = spawnVariants.upgrader700;
+        availableVariants.builder      = spawnVariants.builder800;
+        availableVariants.repairer     = spawnVariants.repairer800;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.reserver     = spawnVariants.reserver650;
+      } else if (room.energyCapacityAvailable <= 1300) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector800;
+        availableVariants.upgrader     = spawnVariants.upgrader700;
+        availableVariants.builder      = spawnVariants.builder1000;
+        availableVariants.repairer     = spawnVariants.repairer1000;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.remoteLogi   = spawnVariants.remoteLogi1200;
+        availableVariants.reserver     = spawnVariants.reserver1300;
+      } else if (room.energyCapacityAvailable <= 1600) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector800;
+        availableVariants.upgrader     = spawnVariants.upgrader900;
+        availableVariants.builder      = spawnVariants.builder1100;
+        availableVariants.repairer     = spawnVariants.repairer1000;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.warrior      = spawnVariants.warrior1400;
+        availableVariants.healer       = spawnVariants.healer1200;
+        availableVariants.remoteLogi   = spawnVariants.remoteLogi1500;
+        availableVariants.reserver     = spawnVariants.reserver1300;
+      } else if (room.energyCapacityAvailable <= 1800) {
+        availableVariants.harvester    = spawnVariants.harvester550;
+        availableVariants.collector    = spawnVariants.collector800;
+        availableVariants.upgrader     = spawnVariants.upgrader900;
+        availableVariants.builder      = spawnVariants.builder1100;
+        availableVariants.repairer     = spawnVariants.repairer1000;
+        availableVariants.runner       = spawnVariants.runner300;
+        availableVariants.crane        = spawnVariants.crane500;
+        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
+        availableVariants.warrior      = spawnVariants.warrior1800;
+        availableVariants.ranger       = spawnVariants.ranger1800;
+        availableVariants.healer       = spawnVariants.healer1800;
+        availableVariants.remoteLogi   = spawnVariants.remoteLogi1500;
+        availableVariants.reserver     = spawnVariants.reserver1300;
+      }
 
       //: PER-ROOM LINK MANAGEMENT LOGIC
       if (rMem.objects.links) {
@@ -1290,135 +1450,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
         } else invaderLooterAnnounced = false;
       }
 
-      //$ >#######################################################################################################################< $\\
-      //$> ############################################### SPAWN VARIANT ALLOCATION ############################################## <$\\
-      //$ >#######################################################################################################################< $\\
-
-      if (room.energyCapacityAvailable === 300) {
-        availableVariants.harvester    = spawnVariants.harvester250;
-        availableVariants.collector    = spawnVariants.collector100;
-        availableVariants.upgrader     = spawnVariants.upgrader300;
-        availableVariants.builder      = spawnVariants.builder300;
-        availableVariants.repairer     = spawnVariants.repairer300;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane300;
-      } else if (room.energyCapacityAvailable <= 350) {
-        availableVariants.harvester    = spawnVariants.harvester350;
-        availableVariants.collector    = spawnVariants.collector300;
-        availableVariants.upgrader     = spawnVariants.upgrader350;
-        availableVariants.builder      = spawnVariants.builder350;
-        availableVariants.repairer     = spawnVariants.repairer300;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane300;
-      } else if (room.energyCapacityAvailable <= 400) {
-        availableVariants.harvester    = spawnVariants.harvester400;
-        availableVariants.collector    = spawnVariants.collector300;
-        availableVariants.upgrader     = spawnVariants.upgrader400;
-        availableVariants.builder      = spawnVariants.builder350;
-        availableVariants.repairer     = spawnVariants.repairer300;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane300;
-      } else if (room.energyCapacityAvailable <= 500) {
-        availableVariants.harvester    = spawnVariants.harvester450;
-        availableVariants.collector    = spawnVariants.collector300;
-        availableVariants.upgrader     = spawnVariants.upgrader400;
-        availableVariants.builder      = spawnVariants.builder350;
-        availableVariants.repairer     = spawnVariants.repairer300;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane300;
-      } else if (room.energyCapacityAvailable <= 550) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector300;
-        availableVariants.upgrader     = spawnVariants.upgrader550;
-        availableVariants.builder      = spawnVariants.builder500;
-        availableVariants.repairer     = spawnVariants.repairer500;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.warrior      = spawnVariants.warrior520;
-        availableVariants.crane        = spawnVariants.crane500;
-      } else if (room.energyCapacityAvailable <= 600) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector300;
-        availableVariants.upgrader     = spawnVariants.upgrader550;
-        availableVariants.builder      = spawnVariants.builder500;
-        availableVariants.repairer     = spawnVariants.repairer500;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.warrior      = spawnVariants.warrior520;
-        availableVariants.crane        = spawnVariants.crane500;
-      } else if (room.energyCapacityAvailable <= 700) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector500;
-        availableVariants.upgrader     = spawnVariants.upgrader550;
-        availableVariants.builder      = spawnVariants.builder600;
-        availableVariants.repairer     = spawnVariants.repairer500;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane500;
-        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
-      } else if (room.energyCapacityAvailable <= 800) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector500;
-        availableVariants.upgrader     = spawnVariants.upgrader700;
-        availableVariants.builder      = spawnVariants.builder600;
-        availableVariants.repairer     = spawnVariants.repairer500;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane500;
-        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
-        availableVariants.reserver     = spawnVariants.reserver650;
-      } else if (room.energyCapacityAvailable <= 900) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector500;
-        availableVariants.upgrader     = spawnVariants.upgrader800;
-        availableVariants.builder      = spawnVariants.builder700;
-        availableVariants.repairer     = spawnVariants.repairer600;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane500;
-        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
-        availableVariants.reserver     = spawnVariants.reserver650;
-      } else if (room.energyCapacityAvailable <= 1000) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector500;
-        availableVariants.upgrader     = spawnVariants.upgrader700;
-        availableVariants.builder      = spawnVariants.builder800;
-        availableVariants.repairer     = spawnVariants.repairer800;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane500;
-        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
-        availableVariants.reserver     = spawnVariants.reserver650;
-      } else if (room.energyCapacityAvailable <= 1250) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector500;
-        availableVariants.upgrader     = spawnVariants.upgrader700;
-        availableVariants.builder      = spawnVariants.builder800;
-        availableVariants.repairer     = spawnVariants.repairer800;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane500;
-        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
-        availableVariants.reserver     = spawnVariants.reserver650;
-      } else if (room.energyCapacityAvailable <= 1300) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector500;
-        availableVariants.upgrader     = spawnVariants.upgrader700;
-        availableVariants.builder      = spawnVariants.builder1000;
-        availableVariants.repairer     = spawnVariants.repairer1000;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane500;
-        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
-        availableVariants.remoteLogi   = spawnVariants.remoteLogi1200;
-        availableVariants.reserver     = spawnVariants.reserver1300;
-      } else if (room.energyCapacityAvailable > 1600) {
-        availableVariants.harvester    = spawnVariants.harvester550;
-        availableVariants.collector    = spawnVariants.collector500;
-        availableVariants.upgrader     = spawnVariants.upgrader900;
-        availableVariants.builder      = spawnVariants.builder1100;
-        availableVariants.repairer     = spawnVariants.repairer1000;
-        availableVariants.runner       = spawnVariants.runner300;
-        availableVariants.crane        = spawnVariants.crane500;
-        availableVariants.remoteGuard  = spawnVariants.remoteGuard700;
-        availableVariants.warrior      = spawnVariants.warrior1400;
-        availableVariants.healer       = spawnVariants.healer1200;
-        availableVariants.remoteLogi   = spawnVariants.remoteLogi1500;
-        availableVariants.reserver     = spawnVariants.reserver1300;
-      }
-
       let creepCount: number = 0;
       let capacity:   number;
 
@@ -1530,10 +1561,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
             rebooterCount++;
             newName = colonyName + '_Rb' + rebooterCount;
           }
+          console.log(room.link() + 'Spawning an emergency Rebooter...');
         } else if (numCreeps <= 1 && room.energyAvailable <= 300 && room.storage && room.storage.store[RESOURCE_ENERGY] >= 500) {
           const result = readySpawn.spawnCreep([CARRY, MOVE], 'Collie the Emergency Collector Creep', { memory: { role: 'collector', roleForQuota: 'collector', homeRoom: roomName } });
           switch (result) {
             case OK:
+              console.log(room.link() + 'Spawning an emergency Collector...');
             case ERR_BUSY:
             case ERR_NOT_ENOUGH_ENERGY:
             case ERR_INVALID_ARGS:
@@ -1647,7 +1680,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
               //$ RESERVERS/REMOTE RUNNERS/HARVESTERS/BUILDERS/GUARDS are at quota, move on to defensive creeps:
               if (rangers.length < rangerTarget) {
                 newName = colonyName + '_Rng' + rangerCount;
-                while (readySpawn.spawnCreep([TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, RANGED_ATTACK, RANGED_ATTACK, MOVE, MOVE], newName, { memory: { role: 'ranger', roleForQuota: 'ranger', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                while (readySpawn.spawnCreep(availableVariants.ranger, newName, { memory: { role: 'ranger', roleForQuota: 'ranger', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
                   rangerCount++;
                   newName = colonyName + '_Rng' + rangerCount;
                 }
