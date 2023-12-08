@@ -9,8 +9,8 @@
     "editor.formatOnSave": false
   },
   "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": true
-  },
+		"source.fixAll.eslint": "explicit"
+	},
   "editor.formatOnSave": true,
   "editor.renderWhitespace": "none",
   "files.encoding": "utf8",
