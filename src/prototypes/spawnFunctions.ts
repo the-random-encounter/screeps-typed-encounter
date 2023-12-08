@@ -1,5 +1,5 @@
 import { max } from "lodash";
-import { validateRoomName, validateFlagName } from "./miscFunctions";
+import { returnCode, validateRoomName, validateFlagName } from "./miscFunctions";
 
 Spawn.prototype.spawnDismantler = function (maxEnergy: number | false = false) {
 
@@ -12,17 +12,17 @@ Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName,
 
 
   let x = 1;
-  const result: ScreepsReturnCode = this.spawnCreep([ MOVE, MOVE, MOVE, MOVE, HEAL, HEAL, HEAL, HEAL ], creepName, { memory: { role: 'healer', roleForQuota: 'healer', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } })
+  const result: ScreepsReturnCode = this.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,HEAL,HEAL,HEAL,HEAL,HEAL,HEAL], creepName, { memory: { role: 'healer', roleForQuota: 'healer', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } })
   switch (result) {
     case ERR_NAME_EXISTS:
-      console.log(this.room.link() + this.name + ': ' + result);
+      console.log(this.room.link() + this.name + ': ' + returnCode(result));
       this.spawnHealer(creepName + x, targetRoom, waypoints, maxEnergy);
       return ERR_NAME_EXISTS;
     case OK:
-      console.log(this.room.link() + this.name + ': ' + result);
+      console.log(this.room.link() + this.name + ': ' + returnCode(result));
       return OK;
     default:
-      console.log(this.room.link() + this.name + ': ' + result);
+      console.log(this.room.link() + this.name + ': ' + returnCode(result));
       return result;
   }
 }
@@ -32,31 +32,42 @@ Spawn.prototype.spawnBeef = function (creepName: string, targetRoom: RoomName, w
   const result: ScreepsReturnCode = this.spawnCreep([ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE ], creepName, { memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } })
   switch (result) {
     case ERR_NAME_EXISTS:
-      console.log(this.room.link() + this.name + ': ' + result);
+      console.log(this.room.link() + this.name + ': ' + returnCode(result));
       this.spawnBeef(creepName + x, targetRoom, waypoints, maxEnergy);
       return ERR_NAME_EXISTS;
     case OK:
-      console.log(this.room.link() + this.name + ': ' + result);
+      console.log(this.room.link() + this.name + ': ' + returnCode(result));
       return OK;
     default:
-      console.log(this.room.link() + this.name + ': ' + result);
+      console.log(this.room.link() + this.name + ': ' + returnCode(result));
       return result;
   }
 }
-Spawn.prototype.spawnWarrior = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false) {
 
-	if (!validateRoomName(targetRoom)) return 'Invalid roomname provided.';
-	if (!validateFlagName(waypoints)) return 'Invalid waypoints provided.';
 
-	const baseBody = [MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK];
+Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ScreepsReturnCode {
+
+	const baseBody = [TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,HEAL,HEAL,HEAL,HEAL,HEAL,HEAL];
+
+	const result = this.spawnCreep(baseBody, creepName, { memory: { role: 'healer', roleForQuota: 'healer', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } });
+	 console.log(this.room.link() + 'Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result));
+   return result;
+
+}
+
+Spawn.prototype.spawnWarrior = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ScreepsReturnCode {
+
+
+	const baseBody = [TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK];
 
 	const result = this.spawnCreep(baseBody, creepName, { memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } });
-	return this.room.link() + 'Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + result;
+	console.log(this.room.link() + 'Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result));
+  return result;
 }
 
 Spawn.prototype.spawnHarvester = function (targetRoom: RoomName, name: string) {
 	const result = this.spawnCreep([CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK], name, { memory: { role: 'harvester', roleForQuota: 'harvester', homeRoom: targetRoom, rallyPoint: targetRoom } });
-	return '[' + this.room.name + ']: Spawning harvester (home: ' + targetRoom + ')... RESULT CODE: ' + result;
+	return '[' + this.room.name + ']: Spawning harvester (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result);
 }
 Spawn.prototype.spawnClaimer = function (claimRoom: RoomName) {
 

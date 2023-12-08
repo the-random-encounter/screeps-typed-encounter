@@ -1,13 +1,21 @@
 import { calcPath, validateRoomName, randomColor, createRoomFlag } from './miscFunctions';
 
 Room.prototype.clearPPT = function () { this.clearRCLCounter(); }
+
 Room.prototype.enableCSL                   = function() { this.enableCentralStorageLogic();   }
+
 Room.prototype.disableCSL                  = function() { this.disableCentralStorageLogic(); }
+
 Room.prototype.toggleCSL                   = function() { this.toggleCentralStorageLogic();   }
+
 Room.prototype.setAttackRoom               = function (roomName: RoomName) { this.memory.data.attackRoom = roomName; }
+
 Room.prototype.setCustomAttackTarget       = function (attackTarget: Id<AnyStructure>) { this.memory.data.customAttackTarget = attackTarget;  }
+
 Room.prototype.getInboxes                  = function () { return this.memory.settings.containerSettings.inboxes; }
+
 Room.prototype.getOutboxes                 = function() { return this.memory.settings.containerSettings.outboxes;   }
+
 Room.prototype.setQuota                    = function(roleTarget: CreepRoles, newTarget: number) { this.setTarget(roleTarget, newTarget); }
 
 Room.prototype.cacheObjects                = function() {
@@ -333,12 +341,14 @@ Room.prototype.cacheObjects                = function() {
   console.log(this.link() + 'Caching objects for room \'' + this.name + '\' completed.');
   return true;
 }
+
 Room.prototype.initTargets                 = function(array: number[]) {
 
   const targetArray = array || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   this.memory.targets = {};
 }
+
 Room.prototype.setTarget                   = function(roleTarget: CreepRoles, newTarget: number) {
 
   const oldTarget = this.memory.targets[roleTarget];
@@ -347,6 +357,7 @@ Room.prototype.setTarget                   = function(roleTarget: CreepRoles, ne
   console.log(this.link() + 'Set role \'' + roleTarget + '\' target to ' + newTarget + ' (was ' + oldTarget + ').');
   return;
 }
+
 Room.prototype.sendEnergy                 = function() {
 
   const linkToLocal: StructureLink = Game.getObjectById(this.memory.objects.links[0]);
@@ -361,6 +372,7 @@ Room.prototype.sendEnergy                 = function() {
     return;
   }
 }
+
 Room.prototype.initRoom                    = function() {
 
   if (!this.memory.objects)
@@ -385,6 +397,7 @@ Room.prototype.initRoom                    = function() {
   if (this.controller && this.controller.my)
     this.initTargets();
 }
+
 Room.prototype.initTargets                 = function(targetArray: number[] | false = false) {
 
   if (!targetArray) {
@@ -441,6 +454,7 @@ Room.prototype.initTargets                 = function(targetArray: number[] | fa
     return true;
   }
 }
+
 Room.prototype.initFlags                   = function() {
 
   if (!this.memory.settings.flags)
@@ -491,6 +505,7 @@ Room.prototype.initFlags                   = function() {
   console.log(this.link() + 'Room flags initialized: craneUpgrades(' + this.memory.settings.flags.craneUpgrades + ') centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersDoPiles(' + this.memory.settings.flags.runnersDoPiles + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')');
   return;
 }
+
 Room.prototype.setRoomFlags               = function(flags: boolean[]) {
 
   const flag1 = flags[0];
@@ -530,6 +545,7 @@ Room.prototype.setRoomFlags               = function(flags: boolean[]) {
   console.log(this.link() + 'Room flags set: centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersDoPiles(' + this.memory.settings.flags.runnersDoPiles + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')');
   return;
 }
+
 Room.prototype.initSettings               = function() {
 
   if (!this.memory.settings)                                               this.memory.settings = { containerSettings: {}, labSettings: {}, repairSettings: {}, visualSettings: {}, flags: {} };
@@ -572,6 +588,7 @@ Room.prototype.initSettings               = function() {
   console.log(this.link() + 'Room settings initialized.');
   return;
 }
+
 Room.prototype.registerLogisticalPairs = function () {
 
   let sources:         Source[]   = this.find(FIND_SOURCES);
@@ -702,6 +719,7 @@ Room.prototype.registerLogisticalPairs = function () {
   this.setTarget('runner', this.memory.data.logisticalPairs.length);
   return pairReport;
 }
+
 Room.prototype.setRepairRampartsTo         = function(percentMax: number) {
 
   if (percentMax === undefined || percentMax < 0 || percentMax > 100) {
@@ -713,6 +731,7 @@ Room.prototype.setRepairRampartsTo         = function(percentMax: number) {
   console.log(this.link() + 'Ramparts will now repair to ' + this.memory.settings.repairSettings.repairRampartsTo + '% max.');
   return true;
 }
+
 Room.prototype.setRepairWallsTo           = function(percentMax: number) {
 
   if (percentMax === undefined || percentMax < 0 || percentMax > 100) {
@@ -724,6 +743,7 @@ Room.prototype.setRepairWallsTo           = function(percentMax: number) {
   console.log(this.link() + 'Walls will now repair to ' + this.memory.settings.repairSettings.repairWallsTo + '% max.');
   return true;
 }
+
 Room.prototype.setRoomSettings             = function(repairToArray: number[], labSettingsArray: string[]) {
 
   const rampartsPercent = repairToArray[0];
@@ -738,6 +758,7 @@ Room.prototype.setRoomSettings             = function(repairToArray: number[], l
   console.log(this.link() + 'Room settings set: repairRampartsTo(' + this.memory.settings.repairSettings.repairRampartsTo + ') repairWallsTo(' + this.memory.settings.repairSettings.repairWallsTo + ')');
   return;
 }
+
 Room.prototype.setInbox                   = function(boxID: Id<StructureContainer>) {
   let inboxMem: Array<Id<StructureContainer>> = [];
   let outboxes: Array<Id<StructureContainer>> = this.memory.settings.containerSettings.outboxes;
@@ -758,6 +779,7 @@ Room.prototype.setInbox                   = function(boxID: Id<StructureContaine
     return true;
   }
 }
+
 Room.prototype.setOutbox = function (boxID: Id<StructureContainer>) {
   let outboxMem: Array<Id<StructureContainer>> = [];
   let inboxes: Array<Id<StructureContainer>> = this.memory.settings.containerSettings.inboxes;
@@ -776,6 +798,7 @@ Room.prototype.setOutbox = function (boxID: Id<StructureContainer>) {
     return true;
   }
 }
+
 Room.prototype.checkInbox                 = function(boxID: Id<StructureContainer>) {
   const inboxes = this.getInboxes();
 
@@ -784,6 +807,7 @@ Room.prototype.checkInbox                 = function(boxID: Id<StructureContaine
   else
     return false;
 }
+
 Room.prototype.checkOutbox                 = function(boxID: Id<StructureContainer>) {
   const outboxes = this.getOutboxes();
 
@@ -792,6 +816,7 @@ Room.prototype.checkOutbox                 = function(boxID: Id<StructureContain
   else
     return false;
 }
+
 Room.prototype.enableFlag                 = function(flag: RoomFlag, initIfNull: boolean = false) {
   if (this.memory.settings.flags[flag] === undefined && initIfNull === false) {
     console.log(this.link() + 'The specified flag does not exist: ' + flag);
@@ -802,6 +827,7 @@ Room.prototype.enableFlag                 = function(flag: RoomFlag, initIfNull:
     return true;
   }
 }
+
 Room.prototype.disableFlag                 = function(flag: RoomFlag, initIfNull: boolean = false) {
   if (this.memory.settings.flags[flag] === undefined && initIfNull === false) {
     console.log(this.link() + 'The specified flag does not exist: ' + flag);
@@ -812,6 +838,7 @@ Room.prototype.disableFlag                 = function(flag: RoomFlag, initIfNull
     return false;
   }
 }
+
 Room.prototype.toggleFlag                 = function(flag: RoomFlag, initIfNull: boolean = false, defaultValue: boolean) {
   if (this.memory.settings.flags[flag] !== undefined) {
     const logicState = this.memory.settings.flags[flag];
@@ -833,23 +860,28 @@ Room.prototype.toggleFlag                 = function(flag: RoomFlag, initIfNull:
     }
   }
 }
+
 Room.prototype.clearRCLCounter             = function() {
   Memory.miscData.rooms[this.name].controllerPPTArray = [];
   console.log(this.link() + 'Progress Per Tick array successfully cleared.');
   return;
 }
+
 Room.prototype.enableDisplayUpgradeRange = function () {
   this.memory.settings.visualSettings.displayControllerUpgradeRange = true;
   return true;
 }
+
 Room.prototype.enableCentralStorageLogic   = function() {
   this.memory.settings.flags.centralStorageLogic = true;
   return true;
 }
+
 Room.prototype.disableCentralStorageLogic = function() {
   this.memory.settings.flags.centralStorageLogic = false;
   return false;
 }
+
 Room.prototype.toggleCentralStorageLogic   = function() {
   const logicState = this.memory.settings.flags.centralStorageLogic;
   if (logicState) {
@@ -861,14 +893,17 @@ Room.prototype.toggleCentralStorageLogic   = function() {
     return true;
   }
 }
+
 Room.prototype.enableCraneUpgrades         = function() {
   this.memory.settings.flags.craneUpgrades = true;
   return true;
 }
+
 Room.prototype.disableCraneUpgrades       = function() {
   this.memory.settings.flags.craneUpgrades = false;
   return false;
 }
+
 Room.prototype.toggleCraneUpgrades         = function() {
   const logicState = this.memory.settings.flags.craneUpgrades;
   if (logicState) {
@@ -880,6 +915,7 @@ Room.prototype.toggleCraneUpgrades         = function() {
     return true;
   }
 }
+
 Room.prototype.enableBoostCreeps           = function(dontScience: boolean = false) {
   if (this.memory.settings.flags.doScience && !dontScience) {
     console.log(this.link() + 'Cannot enable \'boostCreeps\' flag when \'doScience\' is set to true. (Provide boolean arg "true" in parameters to allow disabling of this flag.');
@@ -891,10 +927,12 @@ Room.prototype.enableBoostCreeps           = function(dontScience: boolean = fal
     return true;
   }
 }
+
 Room.prototype.disableBoostCreeps         = function() {
   this.memory.settings.flags.boostCreeps = false;
   return false;
 }
+
 Room.prototype.toggleBoostCreeps           = function(dontScience: boolean = false) {
   const logicState = this.memory.settings.flags.boostCreeps;
   const doScienceState = this.memory.settings.flags.doScience;
@@ -915,14 +953,17 @@ Room.prototype.toggleBoostCreeps           = function(dontScience: boolean = fal
     return true;
   }
 }
+
 Room.prototype.enableDoScience             = function() {
   this.memory.settings.flags.doScience = true;
   return true;
 }
+
 Room.prototype.disableDoScience           = function() {
   this.memory.settings.flags.doScience = false;
   return false;
 }
+
 Room.prototype.toggleDoScience             = function() {
   const logicState = this.memory.settings.flags.doScience;
   if (logicState) {
@@ -934,14 +975,17 @@ Room.prototype.toggleDoScience             = function() {
     return true;
   }
 }
+
 Room.prototype.enableTowerRepairBasic     = function() {
   this.memory.settings.flags.towerRepairBasic = true;
   return true;
 }
+
 Room.prototype.disableTowerRepairBasic     = function() {
   this.memory.settings.flags.towerRepairBasic = false;
   return false;
 }
+
 Room.prototype.toggleTowerRepairBasic     = function() {
   const logicState = this.memory.settings.flags.towerRepairBasic;
   if (logicState) {
@@ -953,14 +997,17 @@ Room.prototype.toggleTowerRepairBasic     = function() {
     return true;
   }
 }
+
 Room.prototype.enableTowerRepairDefenses   = function() {
   this.memory.settings.flags.towerRepairDefenses = true;
   return true;
 }
+
 Room.prototype.disableTowerRepairDefenses = function() {
   this.memory.settings.flags.towerRepairDefenses = false;
   return false;
 }
+
 Room.prototype.toggleTowerRepairDefenses   = function() {
   const logicState = this.memory.settings.flags.towerRepairDefenses;
   if (logicState) {
@@ -972,14 +1019,17 @@ Room.prototype.toggleTowerRepairDefenses   = function() {
     return true;
   }
 }
+
 Room.prototype.enableRunnersDoMinerals     = function() {
   this.memory.settings.flags.runnersDoMinerals = true;
   return true;
 }
+
 Room.prototype.disableRunnersDoMinerals   = function() {
   this.memory.settings.flags.runnersDoMinerals = false;
   return false;
 }
+
 Room.prototype.toggleRunnersDoMinerals     = function() {
   const logicState = this.memory.settings.flags.runnersDoMinerals;
   if (logicState) {
@@ -991,14 +1041,17 @@ Room.prototype.toggleRunnersDoMinerals     = function() {
     return true;
   }
 }
+
 Room.prototype.enableRepairWalls           = function() {
   this.memory.settings.flags.repairWalls = true;
   return true;
 }
+
 Room.prototype.disableRepairWalls         = function() {
   this.memory.settings.flags.repairWalls = false;
   return false;
 }
+
 Room.prototype.toggleRepairWalls           = function() {
   const logicState = this.memory.settings.flags.repairWalls;
   if (logicState) {
@@ -1010,14 +1063,17 @@ Room.prototype.toggleRepairWalls           = function() {
     return true;
   }
 }
+
 Room.prototype.enableRepairRamparts       = function() {
   this.memory.settings.flags.repairRamparts = true;
   return true;
 }
+
 Room.prototype.disableRepairRamparts       = function() {
   this.memory.settings.flags.repairRamparts = false;
   return false;
 }
+
 Room.prototype.toggleRepairRamparts       = function() {
   const logicState = this.memory.settings.flags.repairRamparts;
   if (logicState) {
@@ -1029,14 +1085,17 @@ Room.prototype.toggleRepairRamparts       = function() {
     return true;
   }
 }
+
 Room.prototype.enableRepairBasics         = function() {
   this.memory.settings.flags.repairBasics = true;
   return true;
 }
+
 Room.prototype.disableRepairBasics         = function() {
   this.memory.settings.flags.repairBasics = false;
   return false;
 }
+
 Room.prototype.toggleRepairBasics         = function() {
   const logicState = this.memory.settings.flags.repairBasics;
   if (logicState) {
@@ -1048,14 +1107,17 @@ Room.prototype.toggleRepairBasics         = function() {
     return true;
   }
 }
+
 Room.prototype.enableSortConSites         = function() {
   this.memory.settings.flags.sortConSites = true;
   return true;
 }
+
 Room.prototype.disableSortConSites         = function() {
   this.memory.settings.flags.sortConSites = false;
   return false;
 }
+
 Room.prototype.toggleSortConSites         = function() {
   const logicState = this.memory.settings.flags.sortConSites;
   if (logicState) {
@@ -1067,6 +1129,7 @@ Room.prototype.toggleSortConSites         = function() {
     return true;
   }
 }
+
 Room.prototype.calcLabReaction             = function() {
 
   const baseReg1 = this.memory.settings.labSettings.reagentOne;
@@ -1153,6 +1216,7 @@ Room.prototype.calcLabReaction             = function() {
 
   return outputChem;
 }
+
 Room.prototype.setSquad                   = function(squadName: string) {
   if (this.memory.data.squads === undefined) this.memory.data.squads = [];
   const squads = this.memory.data.squads;
@@ -1169,6 +1233,7 @@ Room.prototype.setSquad                   = function(squadName: string) {
     return squadName;
   }
 }
+
 Room.prototype.setMusterPoint = function (squadName: string, posArray: number[], roomName: string | false = false) {
   if (!roomName) roomName = this.name;
   else {
@@ -1188,6 +1253,7 @@ Room.prototype.setMusterPoint = function (squadName: string, posArray: number[],
   console.log(this.link() + 'Created muster point for squad \'' + squadName + '\' with name of \'' + squadName + '-muster\' at x=' + posArray[0] + ', y=' + posArray[1] + ' in room ' + roomName + '.');
   return true;
 }
+
 Room.prototype.registerOutpost             = function(roomName: string | number): boolean {
   if (!this.memory.outposts)
     this.memory.outposts = {};
@@ -1315,6 +1381,7 @@ Room.prototype.registerOutpost             = function(roomName: string | number)
   console.log(this.link() + 'Outpost at ' + outpostRoomName + ' successfully registered.');
   return true;
 }
+
 Room.prototype.registerOutpostContainers   = function(outpostName: RoomName) {
   if (typeof outpostName === 'string') { // CALLED FROM MASTER COLONY ROOM
     Game.rooms[outpostName].cacheObjects();
@@ -1360,6 +1427,7 @@ Room.prototype.registerOutpostContainers   = function(outpostName: RoomName) {
     return 'Invalid parameter specified. Either include the home room\'s outpost room name room name as a string, or call from the outpost room itself.';
   }
 }
+
 Room.prototype.calcOutpostPotential       = function() {
   const exitDirections = Object.keys(Game.map.describeExits(this.name));
   const adjacentRoomNames = Object.values(Game.map.describeExits(this.name));
@@ -1368,6 +1436,7 @@ Room.prototype.calcOutpostPotential       = function() {
     numSources: 1
   }
 }
+
 Room.prototype.registerLinks               = function() {
 
   if (this.memory.data === undefined) this.memory.data = {};
@@ -1432,9 +1501,11 @@ Room.prototype.registerLinks               = function() {
     console.log(linkReport);
 
     return linkReport;
+
   }
 
 }
+
 Room.prototype.registerInvaderGroup       = function(rallyPoint: string | string[], targetRoom: RoomName, groupSize: number = 2, groupRoles: string[] = ['melee', 'healer']) {
 
   if (Game.rooms[targetRoom])
@@ -1450,10 +1521,12 @@ Room.prototype.registerInvaderGroup       = function(rallyPoint: string | string
 
   //this.memory.data.invaderGroupSize
 }
+
 Room.prototype.setCraneSpot               = function(posX: number, posY: number) {
   this.memory.data.craneSpot = [posX, posY];
   console.log(this.link() + 'Set craneSpot to ' + posX + ', ' + posY + '.');
 }
+
 Room.prototype.setRemoteTargets           = function (roomName: RoomName, roomXY: number[], waypoints: string | string[] | false = false, rbCount: number = 0, rlCount: number = 0, claimRoom: RoomName | false = false, override: boolean = false) {
   if (override && this.memory.data.remoteWorkRoom !== roomName)
     return 'Current remoteWorkRoom already exists and override flag is not set.';
@@ -1486,26 +1559,45 @@ Room.prototype.setRemoteTargets           = function (roomName: RoomName, roomXY
 
   console.log(report);
 }
-Room.prototype.link = function () {
+
+Room.prototype.link = function (): string {
     return `[<a href="#!/room/${Game.shard.name}/${this.name}">${this.name}</a>]: `;
-};
-Room.prototype.findRemoteLinks = function () {
+}
 
-  const northBox = this.lookForAtArea(LOOK_STRUCTURES, 0, 0, 5, 49, true);
-  const southBox = this.lookForAtArea(LOOK_STRUCTURES, 44, 0, 49, 49, true);
-  const westBox = this.lookForAtArea(LOOK_STRUCTURES, 0, 0, 49, 5, true);
-  const eastBox = this.lookForAtArea(LOOK_STRUCTURES, 0, 44, 49, 49, true);
+Room.prototype.findRemoteLinks = function (): void {
 
-  _.filter(northBox, (s) => s.structure.structureType == STRUCTURE_LINK);
-  _.filter(southBox, (s) => s.structure.structureType == STRUCTURE_LINK);
-  _.filter(westBox, (s) => s.structure.structureType == STRUCTURE_LINK);
-  _.filter(eastBox, (s) => s.structure.structureType == STRUCTURE_LINK);
+  const northBox  = this.lookForAtArea(LOOK_STRUCTURES,   0,  0,  5, 49, true);
+  const southBox  = this.lookForAtArea(LOOK_STRUCTURES,  44,  0, 49, 49, true);
+  const westBox   = this.lookForAtArea(LOOK_STRUCTURES,   0,  0, 49,  5, true);
+  const eastBox   = this.lookForAtArea(LOOK_STRUCTURES,   0, 44, 49, 49, true);
 
-  let aggregateResults: LookForAtAreaResultArray<Structure<StructureConstant>, "structure"> = [];
-  aggregateResults = aggregateResults.concat(northBox);
-  aggregateResults = aggregateResults.concat(southBox);
-  aggregateResults = aggregateResults.concat(westBox);
-  aggregateResults = aggregateResults.concat(eastBox);
+  _.filter(northBox,  { 'structureType': STRUCTURE_LINK });
+  _.filter(southBox,  { 'structureType': STRUCTURE_LINK });
+  _.filter(westBox ,  { 'structureType': STRUCTURE_LINK });
+  _.filter(eastBox ,  { 'structureType': STRUCTURE_LINK });
 
-  console.log(JSON.stringify(aggregateResults));
+  let aggregateResults: LookForAtAreaResultArray<Structure<StructureConstant>, "structure"> = northBox.concat(southBox);
+
+  aggregateResults = aggregateResults.concat(westBox );
+  aggregateResults = aggregateResults.concat(eastBox );
+
+  console.log(aggregateResults);
+
+  //if (aggregateResults.length) return aggregateResults;
+  //else return;
+  return;
+}
+
+Room.prototype.setCombatObjectives = function(attackRoom: RoomName, waypoints: string | string[], customTarget: Id<AnyStructure> | Id<AnyStructure>[] | false = false): boolean {
+
+  if (this.memory.data.combatObjectives === undefined)
+    this.memory.data.combatObjectives = {};
+
+  this.memory.data.combatObjectives.attackRoom = attackRoom;
+  this.memory.data.combatObjectives.waypoints = waypoints;
+
+  if (customTarget)
+    this.memory.data.combatObjectives.customAttackTargets = customTarget;
+
+  return true;
 }
