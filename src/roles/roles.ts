@@ -1378,12 +1378,14 @@ export const roleRemoteHarvester = {
             if (containers.length > 0) {
               const target = pos.findClosestByRange(containers);
 
-              if (!pos.isNearTo(target)) creep.moveTo(target, pathing.harvesterPathing);
-              else {
-                if (target.hits < target.hitsMax) creep.repair(target);
+              if (target) {
+                if (!pos.isNearTo(target)) creep.moveTo(target, pathing.harvesterPathing);
                 else {
-                  creep.unloadEnergy();
-                  creep.harvestEnergy();
+                  if (target.hits < target.hitsMax) creep.repair(target);
+                  else {
+                    creep.unloadEnergy();
+                    creep.harvestEnergy();
+                  }
                 }
               }
             } else {
