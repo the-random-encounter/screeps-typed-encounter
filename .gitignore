@@ -3,7 +3,6 @@ package-lock.json
 
 # Ignore basic folders
 /node_modules
-/docs
 /dist
 /host
 
