@@ -180,6 +180,7 @@ declare global {
     targetPile(pileID: Id<Resource>):                 void;
   }
   interface Room { // * ADDITIONAL ROOM OBJECT FUNCTIONS
+    RLP       ():                                     boolean;
     clearPPT  ():                                     void;
     enableCSL ():                                     void;
     disableCSL():                                     void;
@@ -202,7 +203,7 @@ declare global {
     initFlags():                                      void;
     setRoomFlags(flags: boolean[]):                   void;
     initSettings():                                   void;
-    registerLogisticalPairs():                        void;
+    registerLogisticalPairs():                        boolean;
     setRepairRampartsTo(percentMax:   number  ):      void;
     setRepairWallsTo(percentMax:      number  ):      void;
     setRoomSettings(repairToArray:    number[],
@@ -865,26 +866,6 @@ const spawnVariants: {[key: string]: Array<BodyPartConstant>} = {
   'pony1250':        [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ]
 }
 
-// PURPOSE define working variant set for use in the main loop, assigned based on current energy capacity limits
-let availableVariants:{[key: string]: {body: BodyPartConstant[], cost: number}} = {
-  harvester:  { body: [], cost: 0},
-  filler:  { body: [], cost: 0},
-  upgrader:   { body: [], cost: 0},
-  builder:    { body: [], cost: 0},
-  repairer:   { body: [], cost: 0},
-  runner:     { body: [], cost: 0},
-  warrior:    { body: [], cost: 0},
-  crane:      { body: [], cost: 0},
-  remoteGuard:{ body: [], cost: 0},
-  remoteLogi: { body: [], cost: 0},
-  reserver:   { body: [], cost: 0},
-  healer:     { body: [], cost: 0},
-  ranger:     { body: [], cost: 0},
-  beast:      { body: [], cost: 0},
-  pony:       { body: [], cost: 0},
-  beef:       { body: [], cost: 0}
-}
-
 // PURPOSE declare creep counting integers for spawning purposes
 let builderCount:   number = 1;
 let claimerCount:   number = 1;
@@ -1255,6 +1236,27 @@ export const loop = ErrorMapper.wrapLoop(() => {
       roomDefense(room);
 
       //: SPAWN VARIANT ALLOCATION
+
+      // PURPOSE define working variant set for use in the main loop, assigned based on current energy capacity limits
+      let availableVariants:{[key: string]: {body: BodyPartConstant[], cost: number}} = {
+        harvester:  { body: [], cost: 0},
+        filler:  { body: [], cost: 0},
+        upgrader:   { body: [], cost: 0},
+        builder:    { body: [], cost: 0},
+        repairer:   { body: [], cost: 0},
+        runner:     { body: [], cost: 0},
+        warrior:    { body: [], cost: 0},
+        crane:      { body: [], cost: 0},
+        remoteGuard:{ body: [], cost: 0},
+        remoteLogi: { body: [], cost: 0},
+        reserver:   { body: [], cost: 0},
+        healer:     { body: [], cost: 0},
+        ranger:     { body: [], cost: 0},
+        beast:      { body: [], cost: 0},
+        pony:       { body: [], cost: 0},
+        beef:       { body: [], cost: 0}
+      }
+
       if (room.energyCapacityAvailable === 300) {
         availableVariants.harvester.body      = spawnVariants.harvester250;
         availableVariants.harvester.cost      = 250;
@@ -1760,6 +1762,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
           else readySpawn = thisSpawn;
         }
         if (!readySpawn.spawning) {
+          log(readySpawn.pos.link() + readySpawn.name + ': Ready for spawning', room);
           const numCreeps: number = Object.keys(Game.creeps).length;
           if (numCreeps == 0 && room.energyAvailable <= 300 && (!room.storage || (room.storage &&  room.storage.store[RESOURCE_ENERGY] < 500)) && room.controller.level > 1) {
             newName = colonyName + '_Rb' + rebooterCount;
@@ -1793,6 +1796,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
               newName = colonyName + '_F' + fillerCount;
               let max = 800;
               if (room.energyCapacityAvailable < 800) max = 500;
+              else if (room.energyCapacityAvailable < 300) max = 300;
               while (readySpawn.spawnCreep(readySpawn.determineBodyparts('filler', max), newName, { memory: { role: 'filler', roleForQuota: 'filler', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
                 fillerCount++;
                 newName = colonyName + '_F' + fillerCount;
@@ -1909,28 +1913,46 @@ export const loop = ErrorMapper.wrapLoop(() => {
             }
           }
         }
+        let  makeWaitHarvester = 0;
+        let  makeWaitHauler = 0;
+        let  makeWaitBuilder = 0;
+        let  makeWaitClaimer = 0;
 
         if (rMem.data.claimRooms !== undefined) {
-        const rooms = Object.keys(rMem.data.claimRooms) as RoomName[];
+          const rooms = Object.keys(rMem.data.claimRooms) as RoomName[];
+          if (makeWaitHarvester !== 100) makeWaitHarvester = 0;
+          if (makeWaitHauler !== 100) makeWaitHauler = 0;
+          if (makeWaitClaimer !== 100) makeWaitClaimer = 0;
+          if (makeWaitBuilder !== 100) makeWaitBuilder = 0;
 
           for (let i = 0; i < rooms.length; i++) {
-            if (rMem.data.claimRooms[rooms[i]].hasBeenClaimed === false && rMem.data.claimRooms[rooms[i]].claimerSpawned === false && !readySpawn.spawning) {
+            if (tickCount % makeWaitClaimer == 0 && rMem.data.claimRooms[rooms[i]].hasBeenClaimed === false && rMem.data.claimRooms[rooms[i]].claimerSpawned === false && !readySpawn.spawning) {
               const creeps = Object.entries(Memory.creeps);
               const claimers = creeps.filter((creep) => creep[1].memory.role === 'claimer');
               console.log(claimers);
               const claimerSpawned = readySpawn.spawnClaimer(rMem.data.claimRooms[rooms[i]].roomName, 'Claimer' + i + 1, true);
               if (claimerSpawned === 'OK')
                 rMem.data.claimRooms[rooms[i]].claimerSpawned = true;
-            } else if (rMem.data.claimRooms[rooms[i]].neededHarvesters > 0 && !readySpawn.spawning) {
+              else if (claimerSpawned === 'ERR_NOT_ENOUGH_RESOURCES')
+                makeWaitClaimer = 100;
+            } else if (tickCount % makeWaitHarvester == 0 && rMem.data.claimRooms[rooms[i]].neededHarvesters > 0 && !readySpawn.spawning) {
               const harvesterSpawned = readySpawn.spawnNewClaimHarvester(rMem.data.claimRooms[rooms[i]].roomName, 'NewClaimHarvester' + i);
               if (harvesterSpawned === 'OK')
                   rMem.data.claimRooms[rooms[i]].neededHarvesters -= 1;
-            } else if (rMem.data.claimRooms[rooms[i]].neededBuilders > 0 && !readySpawn.spawning) {
+              else if (harvesterSpawned === 'ERR_NOT_ENOUGH_RESOURCES')
+                makeWaitHarvester = 100;
+            } else if (tickCount % makeWaitBuilder == 0 && rMem.data.claimRooms[rooms[i]].neededBuilders > 0 && !readySpawn.spawning) {
               const builderSpawned = readySpawn.spawnNewClaimBuilder(rMem.data.claimRooms[rooms[i]].roomName, 'NewClaimBuilder' + i);
               if (builderSpawned === 'OK')
                 rMem.data.claimRooms[rooms[i]].neededBuilders -= 1;
-            } else if (rMem.data.claimRooms[rooms[i]].energyRemaining > 0) {
+              else if (builderSpawned === 'ERR_NOT_ENOUGH_RESOURCES')
+                makeWaitBuilder = 100;
+            } else if (tickCount % makeWaitHauler == 0 && rMem.data.claimRooms[rooms[i]].energyRemaining > 0) {
               const haulerSpawned = readySpawn.spawnNewClaimHauler(rMem.data.claimRooms[rooms[i]].roomName, 'NewClaimHauler');
+              if (haulerSpawned === 'OK')
+                break;
+              else if (haulerSpawned === 'ERR_NOT_ENOUGH_RESOURCES')
+                makeWaitHauler = 100;
             }
           }
         }
