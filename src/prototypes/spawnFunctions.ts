@@ -174,7 +174,7 @@ Spawn.prototype.spawnNewClaimHauler = function (targetRoom: RoomName, name: stri
 
   const baseBody = this.determineBodyparts('remotelogistician');
 
-  const result = this.spawnCreep(baseBody, name, { memory: { role: 'remotelogistician', roleForQuota: 'unallocated', homeRoom: targetRoom, rallyPoint: claimObjective.waypoints, destRoom: targetRoom, destPos: [claimObjective.logSpot.x, claimObjective.logSpot.y] } });
+  const result = this.spawnCreep(baseBody, name, { memory: { role: 'remotelogistician', roleForQuota: 'unallocated', homeRoom: this.room.name, rallyPoint: claimObjective.waypoints, destRoom: targetRoom, destPos: [claimObjective.logSpot.x, claimObjective.logSpot.y] } });
 
   let logMsg = 'Attempting to spawn a new claim hauler (home: ' + targetRoom + ')...';
 
@@ -360,12 +360,12 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy?
         else if (part === WORK)   finalWork++;
       });
 
-      log('pathLength: ' + pathLen + ' | ' + bodyArray.toString(), this.room);
-      log('carryParts: ' + finalCarry + ' maxCarryParts: ' + maxCarryParts + ' | moveParts: ' + finalMove + ' maxMoveParts: ' + maxMoveParts, this.room);
-      if (finalWork)
-        log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + 'workParts: ' + finalWork + ' workCost: ' + finalWork * 100 + ' finalCost: ' + finalCost, this.room);
-      else
-        log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + ' finalCost: ' + finalCost, this.room);
+      //log('pathLength: ' + pathLen + ' | ' + bodyArray.toString(), this.room);
+      //log('carryParts: ' + finalCarry + ' maxCarryParts: ' + maxCarryParts + ' | moveParts: ' + finalMove + ' maxMoveParts: ' + maxMoveParts, this.room);
+      //if (finalWork)
+        //log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + 'workParts: ' + finalWork + ' workCost: ' + finalWork * 100 + ' finalCost: ' + finalCost, this.room);
+      //else
+      //  log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + ' finalCost: ' + finalCost, this.room);
 
       return bodyArray;
     }
