@@ -1,5 +1,5 @@
 import { max } from "lodash";
-import { returnCode, validateRoomName, validateFlagName } from "./miscFunctions";
+import { returnCode, validateRoomName, validateFlagName, log } from "./miscFunctions";
 
 Spawn.prototype.spawnDismantler = function (maxEnergy: number | false = false) {
 
@@ -15,14 +15,14 @@ Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName,
   const result: ScreepsReturnCode = this.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,HEAL,HEAL,HEAL,HEAL,HEAL,HEAL], creepName, { memory: { role: 'healer', roleForQuota: 'healer', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } })
   switch (result) {
     case ERR_NAME_EXISTS:
-      console.log(this.room.link() + this.name + ': ' + returnCode(result));
+      log(this.name + ': ' + returnCode(result), this.room);
       this.spawnHealer(creepName + x, targetRoom, waypoints, maxEnergy);
       return ERR_NAME_EXISTS;
     case OK:
-      console.log(this.room.link() + this.name + ': ' + returnCode(result));
+      log(this.name + ': ' + returnCode(result), this.room);
       return OK;
     default:
-      console.log(this.room.link() + this.name + ': ' + returnCode(result));
+      log(this.name + ': ' + returnCode(result), this.room);
       return result;
   }
 }
@@ -32,14 +32,14 @@ Spawn.prototype.spawnBeef = function (creepName: string, targetRoom: RoomName, w
   const result: ScreepsReturnCode = this.spawnCreep([ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE ], creepName, { memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } })
   switch (result) {
     case ERR_NAME_EXISTS:
-      console.log(this.room.link() + this.name + ': ' + returnCode(result));
+      log(this.name + ': ' + returnCode(result), this.room);
       this.spawnBeef(creepName + x, targetRoom, waypoints, maxEnergy);
       return ERR_NAME_EXISTS;
     case OK:
-      console.log(this.room.link() + this.name + ': ' + returnCode(result));
+      log(this.name + ': ' + returnCode(result), this.room);
       return OK;
     default:
-      console.log(this.room.link() + this.name + ': ' + returnCode(result));
+      log(this.name + ': ' + returnCode(result), this.room);
       return result;
   }
 }
@@ -50,7 +50,7 @@ Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName,
 	const baseBody = [TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,HEAL,HEAL,HEAL,HEAL,HEAL,HEAL];
 
 	const result = this.spawnCreep(baseBody, creepName, { memory: { role: 'healer', roleForQuota: 'healer', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } });
-	 console.log(this.room.link() + 'Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result));
+	 log('Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
    return result;
 
 }
@@ -61,13 +61,14 @@ Spawn.prototype.spawnWarrior = function (creepName: string, targetRoom: RoomName
 	const baseBody = [TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK];
 
 	const result = this.spawnCreep(baseBody, creepName, { memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } });
-	console.log(this.room.link() + 'Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result));
+	log('Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
   return result;
 }
 
 Spawn.prototype.spawnHarvester = function (targetRoom: RoomName, name: string) {
 	const result = this.spawnCreep([CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK], name, { memory: { role: 'harvester', roleForQuota: 'harvester', homeRoom: targetRoom, rallyPoint: targetRoom } });
-	return '[' + this.room.name + ']: Spawning harvester (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result);
+	log('Spawning harvester (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+  return result;
 }
 Spawn.prototype.spawnClaimer = function (claimRoom: RoomName) {
 
@@ -127,7 +128,7 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy:
 
         if (maxCarryParts > carryParts) maxCarryParts = carryParts;
         if (maxMoveParts  > moveParts ) maxMoveParts  = moveParts;
-        console.log('pathLength: ' + pathLen);
+        log('pathLength: ' + pathLen, this.room);
 
         for (let i = 0; i < maxCarryParts; i++) carryArray.push(CARRY);
 
@@ -146,6 +147,7 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy:
         partCost      = currCarryCost + currMoveCost;
 
         let bodyArray : BodyPartConstant[] = carryArray.concat(moveArray);
+        let finalCost: number = bodyArray.length * 50;
 
         if (locality == 'remote') {
           let isEven = carryArray.length % 2;
@@ -153,30 +155,47 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy:
             if (maxEnergy - partCost >= 150) {
               bodyArray.push(WORK);
               bodyArray.push(MOVE);
-            } else if (maxEnergy - partCost >= 100) {
+              finalCost += 150
+            } else if (maxEnergy - partCost >= 50) {
               bodyArray.shift();
               bodyArray.push(WORK);
+              finalCost += 50
             } else {
               bodyArray.pop();
               bodyArray.shift();
               bodyArray.push(WORK);
             }
           } else {
-            if (maxEnergy - partCost >= 100)
+            if (maxEnergy - partCost >= 100) {
               bodyArray.push(WORK);
+              finalCost += 100;
+            }
             else if (maxEnergy - partCost >= 50) {
               bodyArray.shift();
               bodyArray.push(WORK);
+              finalCost += 50;
             }
           }
         }
-        console.log(bodyArray);
-        console.log('carryParts: ' + carryArray.length + ' maxCarryParts: ' + maxCarryParts + ' | moveParts: ' + moveArray.length + ' maxMoveParts: ' + maxMoveParts);
-        console.log('carryCost: ' + carryArray.length * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + moveArray.length * 50 + ' maxMoveCost: ' + maxMoveCost);
+        let finalCarry: number, finalMove: number, finalWork: number;
+
+        _.forEach(bodyArray, (part: BodyPartConstant) => {
+          if (part === CARRY) finalCarry++;
+          else if (part === MOVE) finalMove++;
+          else if (part === WORK) finalWork++;
+        });
+
+        log(bodyArray, this.room);
+        log('carryParts: ' + finalCarry + ' maxCarryParts: ' + maxCarryParts + ' | moveParts: ' + finalMove + ' maxMoveParts: ' + maxMoveParts, this.room);
+        if (finalWork)
+          log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + 'workParts: ' + finalWork + ' workCost: ' + finalWork * 100 + ' finalCost: ' + finalCost, this.room);
+        else
+          log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + ' finalCost: ' + finalCost, this.room);
+
         return bodyArray;
       } catch (e: any) {
-        console.log(e);
-        console.log(e.stack);
+        log(e, this.room);
+        log(e.stack, this.room);
       }
       break;
 		case 'healer':
