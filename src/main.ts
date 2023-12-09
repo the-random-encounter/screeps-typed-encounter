@@ -1,9 +1,9 @@
 // PURPOSE import creep role modules
-import { roleHarvester, roleUpgrader, roleBuilder, roleCollector, roleRepairer, roleRunner, roleCrane, roleMiner, roleScientist, roleRanger, roleWarrior, roleHealer, roleProvider, roleRebooter, roleRemoteLogistician, roleRemoteHarvester, roleRemoteBuilder, roleRemoteRunner, roleRemoteGuard, roleReserver, roleClaimer, roleScout, roleInvader } from "roles/roles";
+import { roleHarvester, roleUpgrader, roleBuilder, roleCollector, roleRepairer, roleRunner, roleCrane, roleMiner, roleScientist, roleRanger, roleWarrior, roleHealer, roleProvider, roleRebooter, roleRemoteLogistician, roleRemoteHarvester, roleRemoteBuilder, roleRemoteGuard, roleReserver, roleClaimer, roleScout, roleInvader } from "roles/roles";
 
 // PURPOSE import other modules
 import { roomDefense } from "./roomDefense";
-import { calcTickTime, visualRCProgress, buildProgress } from 'prototypes/miscFunctions';
+import { calcTickTime, visualRCProgress, buildProgress, log } from 'prototypes/miscFunctions';
 import { ErrorMapper } from "utils/ErrorMapper";
 import { MemHack } from "utils/MemHack";
 
@@ -866,7 +866,8 @@ if (Memory.miscData === undefined)
   'containerCounter':     0,
   'outpostRoomCounter':   0,
   'outpostSourceCounter': 0,
-  'outpostCounter':       0,
+  'outpostCounterRv':     0,
+  'outpostCounterRG':     0,
   'rooms': {
     'W5N43': {}
     }
@@ -1114,7 +1115,15 @@ export const loop = ErrorMapper.wrapLoop(() => {
     rMem.data.numCSites = cSites.length;
     const numCSites: number = rMem.data.numCSites;
 
-    if (numCSites < numCSitesPrevious) room.cacheObjects();
+    if (numCSites < numCSitesPrevious) {
+      room.cacheObjects();
+      if (rMem.outpostOfRoom) {
+        const outpostContainers: Id<StructureContainer>[] = rMem.objects.containers;
+        const outpostAggregateContainerList: Id<StructureContainer>[] = Game.rooms[rMem.outpostOfRoom].memory.outposts.aggregateContainerList;
+
+        const missingContainers: Id<StructureContainer>[] = outpostAggregateContainerList.filter(containerId => !outpostContainers.includes(containerId));
+      }
+    }
 
     _.forEach(cSites, function (cSite: ConstructionSite) {
       if (cSite.progress > 0) buildProgress(cSite, room);
@@ -1130,7 +1139,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       const colonies: Colonies     = Memory.colonies;
 
       if (tickCount > 0 && tickCount % 1000 == 0) {
-        console.log(room.link() + 'MAIN LOOP, CACHING OBJECTS EVERY 1000 TICKS --- Tick#: ' + tickCount);
+        log('MAIN LOOP, CACHING OBJECTS EVERY 1000 TICKS --- Tick#: ' + tickCount, room);
         room.cacheObjects();
       }
 
@@ -1396,7 +1405,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
       let remoteHarvesterTarget:   number;
       if (rMem.outposts) remoteHarvesterTarget = rMem.outposts.aggregateSourceList.length;
       else remoteHarvesterTarget          = _.get(room.memory, ['targets', 'remoteharvester'  ], 1);
-      let remoteRunnerTarget:      number = _.get(room.memory, ['targets', 'remoterunner'     ], 1);
       let remoteBuilderTarget:     number = _.get(room.memory, ['targets', 'remotebuilder'    ], 1);
       let remoteGuardTarget:       number = _.get(room.memory, ['targets', 'remoteguard'      ], 1);
       let remoteLogisticianTarget: number = _.get(room.memory, ['targets', 'remotelogistician'], 1);
@@ -1419,7 +1427,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
       let scouts:             Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'scout'             &&      creep.memory.homeRoom == roomName);
 
       let remoteHarvesters:   Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remoteharvester'   &&      creep.memory.homeRoom == roomName);
-      let remoteRunners:      Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remoterunner'      &&      creep.memory.homeRoom == roomName);
       let remoteBuilders:     Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remotebuilder'     &&      creep.memory.homeRoom == roomName);
       let remoteGuards:       Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remoteguard'       &&      creep.memory.homeRoom == roomName);
       let remoteLogisticians: Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remotelogistician' &&      creep.memory.homeRoom == roomName);
@@ -1427,8 +1434,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
       let sites: Array<ConstructionSite> = room.find(FIND_CONSTRUCTION_SITES);
       let remoteSites: Array<ConstructionSite> = [];
 
-      if (room.memory.data.remoteWorkRoom)
-        Game.rooms[room.memory.data.remoteWorkRoom].find(FIND_CONSTRUCTION_SITES);
+      for (let i = 0; i < room.memory.outposts.roomList.length; i++) {
+        if (Game.rooms[room.memory.outposts.roomList[i]] !== undefined) {
+          const outpostSites = Game.rooms[room.memory.outposts.roomList[i]].find(FIND_CONSTRUCTION_SITES);
+          remoteSites = remoteSites.concat(outpostSites);
+        }
+      }
 
       // Select a non-geriatric collector to loot compounds or energy from enemy corpses
       let invaderLooterAnnounced: boolean = false;
@@ -1437,13 +1448,13 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (hostiles.length > 0) {
           const hostileOwner: string = hostiles[0].owner.username;
           const creepName:    string = hostiles[0].name;
-          console.log(hostileOwner + ': -----------------HOSTILE CREEPS PRESENT----------------- ' + creepName);
+          log(hostileOwner + ': -----------------HOSTILE CREEPS PRESENT----------------- ' + creepName, room);
           room.visual.rect(0, 0, 50, 50, { fill: '#440000', stroke: '#ff0000', opacity: 0.5, strokeWidth: 0.2 });
           if (collectors.length) {
             for (let i = 0; i < collectors.length; i++) {
               if (collectors[i].ticksToLive > 300) {
                 collectors[i].memory.invaderLooter = true;
-                console.log(room.link() + 'Creep \'' + collectors[i].name + '\' is now the invader looter.');
+                console.log('Creep \'' + collectors[i].name + '\' is now the invader looter.');
                 invaderLooterAnnounced = true;
                 break;
               } else
@@ -1483,11 +1494,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (harvesters[0].memory.source == harvesters[1].memory.source) {
           if (harvesters[0].ticksToLive > harvesters[1].ticksToLive) {
             harvesters[1].assignHarvestSource(true);
-            console.log(room.link() + 'Reassigned ' + harvesters[1].name + '\'s source due to conflict.')
+            log('Reassigned ' + harvesters[1].name + '\'s source due to conflict.', room);
           }
           else {
             harvesters[0].assignHarvestSource(true);
-            console.log(room.link() + 'Reassigned ' + harvesters[0].name + '\'s source due to conflict.')
+            log('Reassigned ' + harvesters[0].name + '\'s source due to conflict.', room);
           }
         }
       }
@@ -1564,12 +1575,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
             rebooterCount++;
             newName = colonyName + '_Rb' + rebooterCount;
           }
-          console.log(room.link() + 'Spawning an emergency Rebooter...');
+          log('Spawning an emergency Rebooter...', room);
         } else if (numCreeps <= 1 && room.energyAvailable <= 300 && room.storage && room.storage.store[RESOURCE_ENERGY] >= 500) {
           const result = readySpawn.spawnCreep([CARRY, MOVE], 'Collie the Emergency Collector Creep', { memory: { role: 'collector', roleForQuota: 'collector', homeRoom: roomName } });
           switch (result) {
             case OK:
-              console.log(room.link() + 'Spawning an emergency Collector...');
+              log('Spawning an emergency Collector...', room);
             case ERR_BUSY:
             case ERR_NOT_ENOUGH_ENERGY:
             case ERR_INVALID_ARGS:
@@ -1654,12 +1665,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
               while (readySpawn.spawnCreep([CARRY, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK], newName, { memory: { role: 'remoteharvester', roleForQuota: 'remoteharvester', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
                 remoteHarvesterCount++;
                 newName = colonyName + '_RH' + remoteHarvesterCount;
-              }
-            } else if (remoteRunners.length < remoteRunnerTarget) {
-              newName = colonyName + '_RR' + remoteRunnerCount;
-              while (readySpawn.spawnCreep([CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, WORK], newName, { memory: { role: 'remoterunner', roleForQuota: 'remoterunner', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                remoteRunnerCount++;
-                newName = colonyName + '_RR' + remoteRunnerCount;
               }
             } else if (remoteSites.length > 0 && remoteBuilders.length < remoteBuilderTarget) {
               newName = colonyName + '_RB' + remoteBuilderCount;
@@ -1764,12 +1769,11 @@ export const loop = ErrorMapper.wrapLoop(() => {
       const warInfo: string = (warriorTarget)         ? '| War:' + warriors.length         + '(' + warriorTarget         + ') ' : '';
       const hlrInfo: string = (healerTarget)          ? '| Hlr:' + healers.length          + '(' + healerTarget          + ') ' : '';
       const rhInfo:  string = (remoteHarvesterTarget) ? '| RH:'  + remoteHarvesters.length + '(' + remoteHarvesterTarget + ') ' : '';
-      const rrInfo:  string = (remoteRunnerTarget)    ? '| RR:'  + remoteRunners.length    + '(' + remoteRunnerTarget    + ') ' : '';
       const rbInfo:  string = (remoteBuilderTarget)   ? '| RB:'  + remoteBuilders.length   + '(' + remoteBuilderTarget   + ') ' : '';
-      const rgInfo:  string = (remoteGuardTarget)     ? '| RG:'  + remoteGuards.length     + '(' + remoteGuardTarget     + ')' : '';
+      const rgInfo:  string = (remoteGuardTarget)     ? '| RG:'  + remoteGuards.length     + '(' + remoteGuardTarget     + ')'  : '';
 
       if (tickInterval !== 0 && tickCount % tickInterval === 0) {
-        console.log(room.link() + energy + storageInfo + hInfo + cInfo + rInfo + bInfo + uInfo + rpInfo + cnInfo + rtInfo + rvInfo + rngInfo + warInfo + hlrInfo + rhInfo + rrInfo + rbInfo + rgInfo + ' Tick: ' + tickCount);
+        console.log(room.link() + energy + storageInfo + hInfo + cInfo + rInfo + bInfo + uInfo + rpInfo + cnInfo + rtInfo + rvInfo + rngInfo + warInfo + hlrInfo + rhInfo + rbInfo + rgInfo + ' Tick: ' + tickCount);
       }
 
       //: ROOM VISUALS - SPAWN INFO BOXES
@@ -1803,7 +1807,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
       // Remote Harvesters, Remote Runners, Remote Builders, Remote Guards
       room.visual.text(
             'RH:' + remoteHarvesters.length + '(' + remoteHarvesterTarget +
-        ') | RR:' + remoteRunners.length    + '(' + remoteRunnerTarget    +
         ') | RB:' + remoteBuilders.length   + '(' + remoteBuilderTarget   +
         ') | RG:' + remoteGuards.length     + '(' + remoteGuardTarget     + ')',
         spawnX,
@@ -1854,7 +1857,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
       // Remote Harvesters, Remote Runners, Remote Builders, Remote Guards
       room.visual.text(
             'RH:' + remoteHarvesters.length + '(' + remoteHarvesterTarget +
-        ') | RR:' + remoteRunners.length    + '(' + remoteRunnerTarget    +
         ') | RB:' + remoteBuilders.length   + '(' + remoteBuilderTarget   +
         ') | RG:' + remoteGuards.length     + '(' + remoteGuardTarget     + ')',
         spawnX,
@@ -1986,9 +1988,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
         break;
       case 'remoteharvester':
         roleRemoteHarvester   .run(creep);
-        break;
-      case 'remoterunner':
-        roleRemoteRunner      .run(creep);
         break;
       case 'remotebuilder':
         roleRemoteBuilder     .run(creep);

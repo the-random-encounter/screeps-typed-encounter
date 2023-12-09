@@ -1,24 +1,16 @@
-import { calcPath, validateRoomName, randomColor, createRoomFlag } from './miscFunctions';
+import { calcPath, validateRoomName, randomColor, createRoomFlag, log } from './miscFunctions';
 
-Room.prototype.clearPPT = function () { this.clearRCLCounter(); }
+Room.prototype.clearPPT                   = function() { this.clearRCLCounter(); }
+Room.prototype.enableCSL                  = function() { this.enableCentralStorageLogic (); }
+Room.prototype.disableCSL                 = function() { this.disableCentralStorageLogic(); }
+Room.prototype.toggleCSL                  = function() { this.toggleCentralStorageLogic (); }
+Room.prototype.setAttackRoom              = function(roomName: RoomName) { this.memory.data.attackRoom = roomName; }
+Room.prototype.setCustomAttackTarget      = function(attackTarget: Id<AnyStructure>) { this.memory.data.customAttackTarget = attackTarget; }
+Room.prototype.getInboxes                 = function() { return this.memory.settings.containerSettings.inboxes; }
+Room.prototype.getOutboxes                = function() { return this.memory.settings.containerSettings.outboxes; }
+Room.prototype.setQuota                   = function(roleTarget: CreepRoles, newTarget: number) { this.setTarget(roleTarget, newTarget); }
 
-Room.prototype.enableCSL                   = function() { this.enableCentralStorageLogic();   }
-
-Room.prototype.disableCSL                  = function() { this.disableCentralStorageLogic(); }
-
-Room.prototype.toggleCSL                   = function() { this.toggleCentralStorageLogic();   }
-
-Room.prototype.setAttackRoom               = function (roomName: RoomName) { this.memory.data.attackRoom = roomName; }
-
-Room.prototype.setCustomAttackTarget       = function (attackTarget: Id<AnyStructure>) { this.memory.data.customAttackTarget = attackTarget;  }
-
-Room.prototype.getInboxes                  = function () { return this.memory.settings.containerSettings.inboxes; }
-
-Room.prototype.getOutboxes                 = function() { return this.memory.settings.containerSettings.outboxes;   }
-
-Room.prototype.setQuota                    = function(roleTarget: CreepRoles, newTarget: number) { this.setTarget(roleTarget, newTarget); }
-
-Room.prototype.cacheObjects                = function() {
+Room.prototype.cacheObjects               = function() {
 
   // declare storage array for objects to cache
   let storageArray: Array<Id<any>> = [];
@@ -54,7 +46,7 @@ Room.prototype.cacheObjects                = function() {
   // check if the 'objects' object exists in room memory & create it if not
   if (!this.memory.objects) this.memory.objects = {};
 
-  console.log(this.link() + 'Caching room objects...');
+  log('Caching room objects...', this);
   // if sources are found, add their IDs to array and add array to room's 'objects' memory
   if (sources) {
     for (let i = 0; i < sources.length; i++)
@@ -62,9 +54,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.sources = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' sources.');
+        log('Cached ' + storageArray.length + ' sources.', this);
       else
-        console.log(this.link() + 'Cached 1 source.');
+        log('Cached 1 source.', this);
     }
     storageArray = [];
   }
@@ -75,7 +67,7 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.mineral = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached 1 mineral.');
+        log('Cached 1 mineral.', this);
     }
     storageArray = [];
   }
@@ -86,9 +78,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.deposit = storageArray[0];
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' deposits.');
+        log('Cached ' + storageArray.length + ' deposits.', this);
       else
-        console.log(this.link() + 'Cached 1 deposit.');
+        log('Cached 1 deposit.', this);
     }
     storageArray = [];
   }
@@ -99,9 +91,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.controller = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' controllers.');
+        log('Cached ' + storageArray.length + ' controllers.', this);
       else
-        console.log(this.link() + 'Cached 1 controller.');
+        log('Cached 1 controller.', this);
     }
     storageArray = [];
   }
@@ -112,9 +104,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.spawns = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' spawns.');
+        log('Cached ' + storageArray.length + ' spawns.', this);
       else
-        console.log(this.link() + 'Cached 1 spawn.');
+        log('Cached 1 spawn.', this);
     }
     storageArray = [];
   }
@@ -125,9 +117,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.extensions = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' extensions.');
+        log('Cached ' + storageArray.length + ' extensions.', this);
       else
-        console.log(this.link() + 'Cached 1 extension.');
+        log('Cached 1 extension.', this);
     }
     storageArray = [];
   }
@@ -138,9 +130,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.towers = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' towers.');
+        log('Cached ' + storageArray.length + ' towers.', this);
       else
-        console.log(this.link() + 'Cached 1 tower.');
+        log('Cached 1 tower.', this);
     }
     storageArray = [];
   }
@@ -151,9 +143,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.containers = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' containers.');
+        log('Cached ' + storageArray.length + ' containers.', this);
       else
-        console.log(this.link() + 'Cached 1 container.');
+        log('Cached 1 container.', this);
     }
     storageArray = [];
   }
@@ -164,7 +156,7 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.storage = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached 1 storage.');
+        log('Cached 1 storage.', this);
     }
     storageArray = [];
   }
@@ -175,9 +167,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.ramparts = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' ramparts.');
+        log('Cached ' + storageArray.length + ' ramparts.', this);
       else
-        console.log(this.link() + 'Cached 1 rampart.');
+        log('Cached 1 rampart.', this);
     }
     storageArray = [];
   }
@@ -188,9 +180,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.links = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' links.');
+        log('Cached ' + storageArray.length + ' links.', this);
       else
-        console.log(this.link() + 'Cached 1 link.');
+        log('Cached 1 link.', this);
     }
     storageArray = [];
   }
@@ -201,7 +193,7 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.extractor = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached 1 extractor.');
+        log('Cached 1 extractor.', this);
     }
     storageArray = [];
   }
@@ -212,9 +204,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.labs = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' labs.');
+        log('Cached ' + storageArray.length + ' labs.', this);
       else
-        console.log(this.link() + 'Cached 1 lab.');
+        log('Cached 1 lab.', this);
     }
     storageArray = [];
   }
@@ -225,7 +217,7 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.terminal = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached 1 terminal.');
+        log('Cached 1 terminal.', this);
     }
     storageArray = [];
   }
@@ -236,7 +228,7 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.factory = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached 1 factory.');
+        log('Cached 1 factory.', this);
     }
     storageArray = [];
   }
@@ -247,7 +239,7 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.observer = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached 1 observer.');
+        log('Cached 1 observer.', this);
     }
     storageArray = [];
   }
@@ -258,7 +250,7 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.powerSpawn = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached 1 power spawn.');
+        log('Cached 1 power spawn.', this);
     }
     storageArray = [];
   }
@@ -269,7 +261,7 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.nuker = storageArray[0];
       if (storageArray.length >= 1)
-        console.log(this.link() + 'Cached 1 nuker.');
+        log('Cached 1 nuker.', this);
     }
     storageArray = [];
   }
@@ -280,9 +272,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.keeperLairs = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' keeper lairs.');
+        log('Cached ' + storageArray.length + ' keeper lairs.', this);
       else
-        console.log(this.link() + 'Cached 1 keeper lair.');
+        log('Cached 1 keeper lair.', this);
     }
     storageArray = [];
   }
@@ -293,9 +285,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.invaderCores = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' invader cores.');
+        log('Cached ' + storageArray.length + ' invader cores.', this);
       else
-        console.log(this.link() + 'Cached 1 invader core.');
+        log('Cached 1 invader core.', this);
     }
     storageArray = [];
   }
@@ -306,9 +298,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.powerBanks = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' power banks.');
+        log('Cached ' + storageArray.length + ' power banks.', this);
       else
-        console.log(this.link() + 'Cached 1 power bank.');
+        log('Cached 1 power bank.', this);
     }
     storageArray = [];
   }
@@ -319,9 +311,9 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.portals = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' portals.');
+        log('Cached ' + storageArray.length + ' portals.', this);
       else
-        console.log(this.link() + 'Cached 1 portal.');
+        log('Cached 1 portal.', this);
     }
     storageArray = [];
   }
@@ -332,29 +324,29 @@ Room.prototype.cacheObjects                = function() {
     if (storageArray.length) {
       this.memory.objects.walls = storageArray;
       if (storageArray.length > 1)
-        console.log(this.link() + 'Cached ' + storageArray.length + ' walls.');
+        log('Cached ' + storageArray.length + ' walls.', this);
       else
-        console.log(this.link() + 'Cached 1 wall.');
+        log('Cached 1 wall.', this);
     }
     storageArray = [];
   }
-  console.log(this.link() + 'Caching objects for room \'' + this.name + '\' completed.');
+  log('Caching objects for room \'' + this.name + '\' completed.', this);
   return true;
 }
 
-Room.prototype.initTargets                 = function(array: number[]) {
+Room.prototype.initTargets                = function(array: number[]) {
 
   const targetArray = array || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   this.memory.targets = {};
 }
 
-Room.prototype.setTarget                   = function(roleTarget: CreepRoles, newTarget: number) {
+Room.prototype.setTarget                  = function(roleTarget: CreepRoles, newTarget: number) {
 
   const oldTarget = this.memory.targets[roleTarget];
   this.memory.targets[roleTarget] = newTarget;
 
-  console.log(this.link() + 'Set role \'' + roleTarget + '\' target to ' + newTarget + ' (was ' + oldTarget + ').');
+  log('Set role \'' + roleTarget + '\' target to ' + newTarget + ' (was ' + oldTarget + ').', this);
   return;
 }
 
@@ -365,15 +357,15 @@ Room.prototype.sendEnergy                 = function() {
 
   if (linkFromLocal.cooldown === 0) {
     linkFromLocal.transferEnergy(linkToLocal)
-    console.log(this.link() + 'Transferring energy.');
+    log('Transferring energy.', this);
     return;
   } else {
-    console.log(this.link() + 'On cooldown, ' + linkFromLocal.cooldown + ' ticks remaining.');
+    log('On cooldown, ' + linkFromLocal.cooldown + ' ticks remaining.', this);
     return;
   }
 }
 
-Room.prototype.initRoom                    = function() {
+Room.prototype.initRoom                   = function() {
 
   if (!this.memory.objects)
     this.memory.objects = {};
@@ -398,7 +390,7 @@ Room.prototype.initRoom                    = function() {
     this.initTargets();
 }
 
-Room.prototype.initTargets                 = function(targetArray: number[] | false = false) {
+Room.prototype.initTargets                = function(targetArray: number[] | false = false) {
 
   if (!targetArray) {
     if (!this.memory.targets)
@@ -420,7 +412,6 @@ Room.prototype.initTargets                 = function(targetArray: number[] | fa
     this.memory.targets.reserver = 0;
     this.memory.targets.remotelogistician = 0;
     this.memory.targets.remoteharvester = 0;
-    this.memory.targets.remoterunner = 0;
     this.memory.targets.remotebuilder = 0;
     this.memory.targets.remoteguard = 0;
     this.memory.targets.claimer = 0;
@@ -429,7 +420,7 @@ Room.prototype.initTargets                 = function(targetArray: number[] | fa
     return true;
   } else {
     if (targetArray.length < 24) {
-      console.log(this.link() + 'Not enough array indices provided.');
+      log('Not enough array indices provided.', this);
       return false;
     }
 
@@ -445,17 +436,16 @@ Room.prototype.initTargets                 = function(targetArray: number[] | fa
     this.memory.targets.rebooter = targetArray[9];
     this.memory.targets.reserver = targetArray[10];
     this.memory.targets.remoteharvester = targetArray[11];
-    this.memory.targets.remoterunner = targetArray[12];
-    this.memory.targets.remotebuilder = targetArray[13];
-    this.memory.targets.remoteguard = targetArray[14];
-    this.memory.targets.crane = targetArray[15];
-    this.memory.targets.miner = targetArray[16];
-    this.memory.targets.scientist = targetArray[17];
+    this.memory.targets.remotebuilder = targetArray[12];
+    this.memory.targets.remoteguard = targetArray[13];
+    this.memory.targets.crane = targetArray[14];
+    this.memory.targets.miner = targetArray[15];
+    this.memory.targets.scientist = targetArray[16];
     return true;
   }
 }
 
-Room.prototype.initFlags                   = function() {
+Room.prototype.initFlags                  = function() {
 
   if (!this.memory.settings.flags)
     this.memory.settings.flags = {};
@@ -502,7 +492,7 @@ Room.prototype.initFlags                   = function() {
   if (this.memory.settings.flags.displayTowerRanges   === undefined)
     this.memory.settings.flags.displayTowerRanges     = false;
 
-  console.log(this.link() + 'Room flags initialized: craneUpgrades(' + this.memory.settings.flags.craneUpgrades + ') centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersDoPiles(' + this.memory.settings.flags.runnersDoPiles + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')');
+  log('Room flags initialized: craneUpgrades(' + this.memory.settings.flags.craneUpgrades + ') centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersDoPiles(' + this.memory.settings.flags.runnersDoPiles + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')', this);
   return;
 }
 
@@ -542,7 +532,7 @@ Room.prototype.setRoomFlags               = function(flags: boolean[]) {
 
   if (flag11)  this.memory.settings.flags.upgradersSeekEnergy  = flag11;
 
-  console.log(this.link() + 'Room flags set: centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersDoPiles(' + this.memory.settings.flags.runnersDoPiles + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')');
+  log('Room flags set: centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersDoPiles(' + this.memory.settings.flags.runnersDoPiles + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')', this);
   return;
 }
 
@@ -585,26 +575,24 @@ Room.prototype.initSettings               = function() {
   if (this.memory.data.logisticalPairs === undefined)                      this.memory.data.logisticalPairs = [];
   if (this.memory.data.pairCounter === undefined)                          this.memory.data.pairCounter = 0;
 
-  console.log(this.link() + 'Room settings initialized.');
+  log('Room settings initialized.', this);
   return;
 }
 
-Room.prototype.registerLogisticalPairs = function () {
+Room.prototype.registerLogisticalPairs    = function () {
 
-  let sources:         Source[]   = this.find(FIND_SOURCES);
-  let minerals:        Mineral[]  = this.find(FIND_MINERALS);
-  let linkDrops:       StructureLink[] = this.find(FIND_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && ((i.pos.x <= 4 || i.pos.x >= 45) || (i.pos.y <= 4 || i.pos.y >= 45)) });
-  let energyOutboxes:  Id<StructureContainer>[] = [];
+  const sources:       Source[]                 = this.find(FIND_SOURCES);
+  const minerals:      Mineral[]                = this.find(FIND_MINERALS);
+  const linkDrops:     StructureLink[]          = this.find(FIND_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && ((i.pos.x <= 4 || i.pos.x >= 45) || (i.pos.y <= 4 || i.pos.y >= 45)) });
+  const extractor:     StructureExtractor[]     = this.find(FIND_STRUCTURES, {filter: {structureType: STRUCTURE_EXTRACTOR }});
+  let extractorBuilt:  boolean                  = false;
   let mineralOutbox:   Id<StructureContainer>;
   let energyInbox:     Id<StructureContainer>;
-  let extractorBuilt:  boolean = false;
-  let extractor:       StructureExtractor;
-  let logisticalPairs: LogisticsPair[] = [];
+  let energyOutboxes:  Id<StructureContainer>[] = [];
+  let logisticalPairs: LogisticsPair[]          = [];
 
-  if (this.memory.objects.extractor !== undefined) {
+  if (extractor.length)
     extractorBuilt = true;
-    extractor = Game.getObjectById(this.memory.objects.extractor);
-  }
 
   if (minerals) {
     const mineralOutboxArray: Array<StructureContainer> = minerals[0].pos.findInRange(FIND_STRUCTURES, 3, { filter: { structureType: STRUCTURE_CONTAINER } });
@@ -643,7 +631,7 @@ Room.prototype.registerLogisticalPairs = function () {
     for (let i = 0; i < energyOutboxes.length; i++) {
       const onePair: LogisticsPair = { source: energyOutboxes[i], destination: storage, resource: 'energy', locality: 'local', descriptor: 'source to storage' };
       if (onePair.source && onePair.destination) logisticalPairs.push(onePair);
-      else console.log(this.link() + 'Malformed Pair: ' + onePair);
+      else log('Malformed Pair: ' + onePair, this);
     }
 
     if (this.memory.outposts) {
@@ -653,46 +641,46 @@ Room.prototype.registerLogisticalPairs = function () {
           for (let j = 0; j < linkDrops.length; j++) {
             const remotePair: LogisticsPair = { source: remoteContainers[i], destination: linkDrops[j].id, resource: 'energy', locality: 'remote', descriptor: 'source to homelink' };
             if (remotePair.source && remotePair.destination) logisticalPairs.push(remotePair);
-            else console.log(this.link() + 'Malformed Pair: ' + remotePair);
+            else log('Malformed Pair: ' + remotePair, this);
           }
         } else {
           const remotePair: LogisticsPair = { source: remoteContainers[i], destination: storage, resource: 'energy', locality: 'remote', descriptor: 'source to storage'};
           if (remotePair.source && remotePair.destination) logisticalPairs.push(remotePair);
-          else console.log(this.link() + 'Malformed Pair: ' + remotePair);
+          else log('Malformed Pair: ' + remotePair, this);
         }
       }
     }
     if (energyInbox.length > 0) {
       const onePairStoU: LogisticsPair = { source: storage, destination: energyInbox, resource: 'energy', locality: 'local', descriptor: 'storage to upgrader' };
       if (onePairStoU.source && onePairStoU.destination) logisticalPairs.push(onePairStoU);
-      else console.log(this.link() + 'Malformed Pair: ' + onePairStoU);
+      else log('Malformed Pair: ' + onePairStoU, this);
     }
 
     if (extractorBuilt && typeof mineralOutbox === 'string') {
-      console.log(this.link() + 'mineralOutbox: ' + mineralOutbox);
-      console.log(this.link() + 'storage: ' + storage);
+      log('mineralOutbox: ' + mineralOutbox, this);
+      log('storage: ' + storage, this);
       const minType: MineralConstant = minerals[0].mineralType;
       const onePair: LogisticsPair = { source: mineralOutbox, destination: storage, resource: minType, locality: 'local', descriptor: 'extractor to storage' };
       if (onePair.source && onePair.destination) logisticalPairs.push(onePair);
-      else console.log(this.link() + 'Malformed Pair: ' + onePair);
+      else log('Malformed Pair: ' + onePair, this);
     }
   } else {
     for (let i = 0; i < energyOutboxes.length; i++) {
       const onePair: LogisticsPair = { source: energyOutboxes[i], destination: energyInbox, resource: 'energy', locality: 'local', descriptor: 'source to upgrader'};
       if (onePair.source && onePair.destination) logisticalPairs.push(onePair);
-      else console.log(this.link() + 'Malformed Pair: ' + onePair);
+      else log('Malformed Pair: ' + onePair, this);
     }
   }
 
-  let pairReport: string = '';
+  let pairReport: string[];
   if (!this.memory.data) this.memory.data = {};
   if (!this.memory.data.logisticalPairs) this.memory.data.logisticalPairs = [];
   if (!this.memory.data.pairCounter) this.memory.data.pairCounter = 0;
   if (logisticalPairs.length > 1) {
-    pairReport = '------------------------------------------------- ' + this.link() + ': REGISTERED LOGISTICAL PAIRS --------------------------------------------------\n';
+    pairReport = ['------------------------------------------------- REGISTERED LOGISTICAL PAIRS --------------------------------------------------\n'];
     for (let i = 0; i < logisticalPairs.length; i++)
-      pairReport += ' PAIR #' + (i+1) + ': OUTBOX> ' + logisticalPairs[i].source + ' | INBOX> ' + logisticalPairs[i].destination + ' | CARGO> ' + logisticalPairs[i].resource + ' | LOCALITY> ' + logisticalPairs[i].locality + ' | TYPE> ' + logisticalPairs[i].descriptor + '\n';
-  } else pairReport = 'No pairs available to register properly.';
+      pairReport.push(' PAIR #' + (i+1) + ': OUTBOX> ' + logisticalPairs[i].source + ' | INBOX> ' + logisticalPairs[i].destination + ' | CARGO> ' + logisticalPairs[i].resource + ' | LOCALITY> ' + logisticalPairs[i].locality + ' | TYPE> ' + logisticalPairs[i].descriptor + '\n');
+  } else pairReport = ['No pairs available to register properly.'];
 
   this.memory.data.logisticalPairs = logisticalPairs;
 
@@ -720,31 +708,31 @@ Room.prototype.registerLogisticalPairs = function () {
   return pairReport;
 }
 
-Room.prototype.setRepairRampartsTo         = function(percentMax: number) {
+Room.prototype.setRepairRampartsTo        = function(percentMax: number) {
 
   if (percentMax === undefined || percentMax < 0 || percentMax > 100) {
-    console.log(this.link() + 'Requires a value 0-100.');
+    log('Requires a value 0-100.', this);
     return false;
   }
 
   this.memory.settings.repairSettings.repairRampartsTo = percentMax;
-  console.log(this.link() + 'Ramparts will now repair to ' + this.memory.settings.repairSettings.repairRampartsTo + '% max.');
+  log('Ramparts will now repair to ' + this.memory.settings.repairSettings.repairRampartsTo + '% max.', this);
   return true;
 }
 
 Room.prototype.setRepairWallsTo           = function(percentMax: number) {
 
   if (percentMax === undefined || percentMax < 0 || percentMax > 100) {
-    console.log(this.link() + 'Requires a value 0-100.');
+    log('Requires a value 0-100.', this);
     return false;
   }
 
   this.memory.settings.repairSettings.repairWallsTo = percentMax;
-  console.log(this.link() + 'Walls will now repair to ' + this.memory.settings.repairSettings.repairWallsTo + '% max.');
+  log('Walls will now repair to ' + this.memory.settings.repairSettings.repairWallsTo + '% max.', this);
   return true;
 }
 
-Room.prototype.setRoomSettings             = function(repairToArray: number[], labSettingsArray: string[]) {
+Room.prototype.setRoomSettings            = function(repairToArray: number[], labSettingsArray: string[]) {
 
   const rampartsPercent = repairToArray[0];
   const wallsPercent     = repairToArray[1];
@@ -755,7 +743,7 @@ Room.prototype.setRoomSettings             = function(repairToArray: number[], l
   if (wallsPercent)
     this.memory.settings.repairSettings.repairWallsTo = wallsPercent;
 
-  console.log(this.link() + 'Room settings set: repairRampartsTo(' + this.memory.settings.repairSettings.repairRampartsTo + ') repairWallsTo(' + this.memory.settings.repairSettings.repairWallsTo + ')');
+  log('Room settings set: repairRampartsTo(' + this.memory.settings.repairSettings.repairRampartsTo + ') repairWallsTo(' + this.memory.settings.repairSettings.repairWallsTo + ')', this);
   return;
 }
 
@@ -765,11 +753,11 @@ Room.prototype.setInbox                   = function(boxID: Id<StructureContaine
   if (this.memory.settings.containerSettings.inboxes !== undefined)
     inboxMem = inboxMem.concat(this.memory.settings.containerSettings.inboxes);
   if (inboxMem.includes(boxID)) {
-    console.log(this.link() + 'This container ID is already in the inbox list.');
+    log('This container ID is already in the inbox list.', this);
     return false;
   }
   else if (outboxes.includes(boxID)) {
-    console.log(this.link() + 'This container ID is already set as an outbox.');
+    log('This container ID is already set as an outbox.', this);
     return false;
   }
 
@@ -780,16 +768,16 @@ Room.prototype.setInbox                   = function(boxID: Id<StructureContaine
   }
 }
 
-Room.prototype.setOutbox = function (boxID: Id<StructureContainer>) {
+Room.prototype.setOutbox                  = function(boxID: Id<StructureContainer>) {
   let outboxMem: Array<Id<StructureContainer>> = [];
   let inboxes: Array<Id<StructureContainer>> = this.memory.settings.containerSettings.inboxes;
   outboxMem = outboxMem.concat(this.memory.settings.containerSettings.outboxes);
   if (outboxMem.includes(boxID)) {
-    console.log(this.link() + 'This container ID is already in the outbox list.');
+    log('This container ID is already in the outbox list.', this);
     return false;
   }
   else if (inboxes.includes(boxID)) {
-    console.log(this.link() + 'This container ID is already set as an inbox.');
+    log('This container ID is already set as an inbox.', this);
     return false;
   }
   else {
@@ -808,7 +796,7 @@ Room.prototype.checkInbox                 = function(boxID: Id<StructureContaine
     return false;
 }
 
-Room.prototype.checkOutbox                 = function(boxID: Id<StructureContainer>) {
+Room.prototype.checkOutbox                = function(boxID: Id<StructureContainer>) {
   const outboxes = this.getOutboxes();
 
   if (outboxes.length > 0 && outboxes.includes(boxID))
@@ -819,7 +807,7 @@ Room.prototype.checkOutbox                 = function(boxID: Id<StructureContain
 
 Room.prototype.enableFlag                 = function(flag: RoomFlag, initIfNull: boolean = false) {
   if (this.memory.settings.flags[flag] === undefined && initIfNull === false) {
-    console.log(this.link() + 'The specified flag does not exist: ' + flag);
+    log('The specified flag does not exist: ' + flag, this);
     return false
   }
   if (initIfNull) {
@@ -828,9 +816,9 @@ Room.prototype.enableFlag                 = function(flag: RoomFlag, initIfNull:
   }
 }
 
-Room.prototype.disableFlag                 = function(flag: RoomFlag, initIfNull: boolean = false) {
+Room.prototype.disableFlag                = function(flag: RoomFlag, initIfNull: boolean = false) {
   if (this.memory.settings.flags[flag] === undefined && initIfNull === false) {
-    console.log(this.link() + 'The specified flag does not exist: ' + flag);
+    log('The specified flag does not exist: ' + flag, this);
     return false;
   }
   if (initIfNull) {
@@ -855,24 +843,24 @@ Room.prototype.toggleFlag                 = function(flag: RoomFlag, initIfNull:
       this.memory.settings.flags[flag] = defaultValue || false;
       return this.memory.settings.flags[flag];
     } else {
-      console.log(this.link() + 'The specified flag does not exist: ' + flag);
+      log('The specified flag does not exist: ' + flag, this);
       return false;
     }
   }
 }
 
-Room.prototype.clearRCLCounter             = function() {
+Room.prototype.clearRCLCounter            = function() {
   Memory.miscData.rooms[this.name].controllerPPTArray = [];
-  console.log(this.link() + 'Progress Per Tick array successfully cleared.');
+  log('Progress Per Tick array successfully cleared.', this);
   return;
 }
 
-Room.prototype.enableDisplayUpgradeRange = function () {
+Room.prototype.enableDisplayUpgradeRange  = function() {
   this.memory.settings.visualSettings.displayControllerUpgradeRange = true;
   return true;
 }
 
-Room.prototype.enableCentralStorageLogic   = function() {
+Room.prototype.enableCentralStorageLogic  = function() {
   this.memory.settings.flags.centralStorageLogic = true;
   return true;
 }
@@ -882,7 +870,7 @@ Room.prototype.disableCentralStorageLogic = function() {
   return false;
 }
 
-Room.prototype.toggleCentralStorageLogic   = function() {
+Room.prototype.toggleCentralStorageLogic  = function() {
   const logicState = this.memory.settings.flags.centralStorageLogic;
   if (logicState) {
     this.memory.settings.flags.centralStorageLogic = false;
@@ -894,7 +882,7 @@ Room.prototype.toggleCentralStorageLogic   = function() {
   }
 }
 
-Room.prototype.enableCraneUpgrades         = function() {
+Room.prototype.enableCraneUpgrades        = function() {
   this.memory.settings.flags.craneUpgrades = true;
   return true;
 }
@@ -904,7 +892,7 @@ Room.prototype.disableCraneUpgrades       = function() {
   return false;
 }
 
-Room.prototype.toggleCraneUpgrades         = function() {
+Room.prototype.toggleCraneUpgrades        = function() {
   const logicState = this.memory.settings.flags.craneUpgrades;
   if (logicState) {
     this.memory.settings.flags.craneUpgrades = false;
@@ -916,9 +904,9 @@ Room.prototype.toggleCraneUpgrades         = function() {
   }
 }
 
-Room.prototype.enableBoostCreeps           = function(dontScience: boolean = false) {
+Room.prototype.enableBoostCreeps          = function(dontScience: boolean = false) {
   if (this.memory.settings.flags.doScience && !dontScience) {
-    console.log(this.link() + 'Cannot enable \'boostCreeps\' flag when \'doScience\' is set to true. (Provide boolean arg "true" in parameters to allow disabling of this flag.');
+    log('Cannot enable \'boostCreeps\' flag when \'doScience\' is set to true. (Provide boolean arg "true" in parameters to allow disabling of this flag.', this);
     return false;
   }
 
@@ -933,12 +921,12 @@ Room.prototype.disableBoostCreeps         = function() {
   return false;
 }
 
-Room.prototype.toggleBoostCreeps           = function(dontScience: boolean = false) {
+Room.prototype.toggleBoostCreeps          = function(dontScience: boolean = false) {
   const logicState = this.memory.settings.flags.boostCreeps;
   const doScienceState = this.memory.settings.flags.doScience;
 
   if (!logicState && doScienceState && !dontScience) {
-    console.log(this.link() + 'Cannot enable \'boostCreeps\' flag when \'doScience\' is set to true. (Provide boolean arg "true" in parameters to allow disabling of this flag.');
+    log('Cannot enable \'boostCreeps\' flag when \'doScience\' is set to true. (Provide boolean arg "true" in parameters to allow disabling of this flag.', this);
     return false;
   }
 
@@ -954,7 +942,7 @@ Room.prototype.toggleBoostCreeps           = function(dontScience: boolean = fal
   }
 }
 
-Room.prototype.enableDoScience             = function() {
+Room.prototype.enableDoScience            = function() {
   this.memory.settings.flags.doScience = true;
   return true;
 }
@@ -964,7 +952,7 @@ Room.prototype.disableDoScience           = function() {
   return false;
 }
 
-Room.prototype.toggleDoScience             = function() {
+Room.prototype.toggleDoScience            = function() {
   const logicState = this.memory.settings.flags.doScience;
   if (logicState) {
     this.memory.settings.flags.doScience = false;
@@ -981,7 +969,7 @@ Room.prototype.enableTowerRepairBasic     = function() {
   return true;
 }
 
-Room.prototype.disableTowerRepairBasic     = function() {
+Room.prototype.disableTowerRepairBasic    = function() {
   this.memory.settings.flags.towerRepairBasic = false;
   return false;
 }
@@ -998,7 +986,7 @@ Room.prototype.toggleTowerRepairBasic     = function() {
   }
 }
 
-Room.prototype.enableTowerRepairDefenses   = function() {
+Room.prototype.enableTowerRepairDefenses  = function() {
   this.memory.settings.flags.towerRepairDefenses = true;
   return true;
 }
@@ -1008,7 +996,7 @@ Room.prototype.disableTowerRepairDefenses = function() {
   return false;
 }
 
-Room.prototype.toggleTowerRepairDefenses   = function() {
+Room.prototype.toggleTowerRepairDefenses  = function() {
   const logicState = this.memory.settings.flags.towerRepairDefenses;
   if (logicState) {
     this.memory.settings.flags.towerRepairDefenses = false;
@@ -1020,7 +1008,7 @@ Room.prototype.toggleTowerRepairDefenses   = function() {
   }
 }
 
-Room.prototype.enableRunnersDoMinerals     = function() {
+Room.prototype.enableRunnersDoMinerals    = function() {
   this.memory.settings.flags.runnersDoMinerals = true;
   return true;
 }
@@ -1030,7 +1018,7 @@ Room.prototype.disableRunnersDoMinerals   = function() {
   return false;
 }
 
-Room.prototype.toggleRunnersDoMinerals     = function() {
+Room.prototype.toggleRunnersDoMinerals    = function() {
   const logicState = this.memory.settings.flags.runnersDoMinerals;
   if (logicState) {
     this.memory.settings.flags.runnersDoMinerals = false;
@@ -1042,7 +1030,7 @@ Room.prototype.toggleRunnersDoMinerals     = function() {
   }
 }
 
-Room.prototype.enableRepairWalls           = function() {
+Room.prototype.enableRepairWalls          = function() {
   this.memory.settings.flags.repairWalls = true;
   return true;
 }
@@ -1052,7 +1040,7 @@ Room.prototype.disableRepairWalls         = function() {
   return false;
 }
 
-Room.prototype.toggleRepairWalls           = function() {
+Room.prototype.toggleRepairWalls          = function() {
   const logicState = this.memory.settings.flags.repairWalls;
   if (logicState) {
     this.memory.settings.flags.repairWalls = false;
@@ -1069,7 +1057,7 @@ Room.prototype.enableRepairRamparts       = function() {
   return true;
 }
 
-Room.prototype.disableRepairRamparts       = function() {
+Room.prototype.disableRepairRamparts      = function() {
   this.memory.settings.flags.repairRamparts = false;
   return false;
 }
@@ -1091,7 +1079,7 @@ Room.prototype.enableRepairBasics         = function() {
   return true;
 }
 
-Room.prototype.disableRepairBasics         = function() {
+Room.prototype.disableRepairBasics        = function() {
   this.memory.settings.flags.repairBasics = false;
   return false;
 }
@@ -1113,7 +1101,7 @@ Room.prototype.enableSortConSites         = function() {
   return true;
 }
 
-Room.prototype.disableSortConSites         = function() {
+Room.prototype.disableSortConSites        = function() {
   this.memory.settings.flags.sortConSites = false;
   return false;
 }
@@ -1130,7 +1118,7 @@ Room.prototype.toggleSortConSites         = function() {
   }
 }
 
-Room.prototype.calcLabReaction             = function() {
+Room.prototype.calcLabReaction            = function() {
 
   const baseReg1 = this.memory.settings.labSettings.reagentOne;
   const baseReg2 = this.memory.settings.labSettings.reagentTwo;
@@ -1223,23 +1211,23 @@ Room.prototype.setSquad                   = function(squadName: string) {
 
   if (squads.find((s) => s === squadName)) {
     const index = squads.indexOf(squadName);
-    console.log(this.link() + 'Squad #' + (index + 1) + ' (' + squadName + ') already exists.');
+    log('Squad #' + (index + 1) + ' (' + squadName + ') already exists.', this);
     return squadName;
   } else {
     let squads = this.memory.data.squads;
     squads.push(squadName);
     this.memory.data.squads = squads;
-    console.log(this.link() + 'Squad #' + squads.length + ' set as \'' + squadName + '\'.');
+    log('Squad #' + squads.length + ' set as \'' + squadName + '\'.', this);
     return squadName;
   }
 }
 
-Room.prototype.setMusterPoint = function (squadName: string, posArray: number[], roomName: string | false = false) {
+Room.prototype.setMusterPoint             = function(squadName: string, posArray: number[], roomName: string | false = false) {
   if (!roomName) roomName = this.name;
   else {
     const isValid = validateRoomName(roomName);
     if (!isValid) {
-      console.log(this.link() + 'Invalid room name.');
+      log('Invalid room name.', this);
       return false;
     }
   }
@@ -1250,11 +1238,11 @@ Room.prototype.setMusterPoint = function (squadName: string, posArray: number[],
 
   const musterPos = new RoomPosition(posArray[0], posArray[1], roomName);
   this.createFlag(musterPos, squadName + '-muster', randomColor(), randomColor());
-  console.log(this.link() + 'Created muster point for squad \'' + squadName + '\' with name of \'' + squadName + '-muster\' at x=' + posArray[0] + ', y=' + posArray[1] + ' in room ' + roomName + '.');
+  log('Created muster point for squad \'' + squadName + '\' with name of \'' + squadName + '-muster\' at x=' + posArray[0] + ', y=' + posArray[1] + ' in room ' + roomName + '.', this);
   return true;
 }
 
-Room.prototype.registerOutpost             = function(roomName: string | number): boolean {
+Room.prototype.registerOutpost            = function(roomName: string | number): boolean {
   if (!this.memory.outposts)
     this.memory.outposts = {};
   if (!this.memory.outposts.roomList)
@@ -1289,7 +1277,7 @@ Room.prototype.registerOutpost             = function(roomName: string | number)
         outpostDirection = LEFT;
         break;
       default:
-        console.log(this.link() + 'You did not specify a valid room name or direction (numeric or string).');
+        log('You did not specify a valid room name or direction (numeric or string).', this);
         return false;
     }
   } else if (typeof roomName === 'string') {
@@ -1336,20 +1324,20 @@ Room.prototype.registerOutpost             = function(roomName: string | number)
           currentOutpostList.push(outpostRoomName);
           this.memory.outposts.roomList = currentOutpostList;
 
-          console.log(this.link() + 'Outpost at ' + outpostRoomName + ' successfully registered.');
+          log('Outpost at ' + outpostRoomName + ' successfully registered.', this);
           return true;
         } else if (Game.map.describeExits(roomName) === null) {
-          console.log(this.link() + 'You did not specify a valid room name or direction (numeric or string).');
+          log('You did not specify a valid room name or direction (numeric or string).', this);
           return false;
         }
     }
   } else {
-    console.log(this.link() + 'You must provide a valid room name or direction (numeric or string). Other data types are not supported.');
+    log('You must provide a valid room name or direction (numeric or string). Other data types are not supported.', this);
     return false;
   }
 
   if (currentOutpostList.includes(outpostRoomName)) {
-    console.log(this.link() + 'This outpost is already registered.');
+    log('This outpost is already registered.', this);
     return false;
   }
 
@@ -1378,11 +1366,11 @@ Room.prototype.registerOutpost             = function(roomName: string | number)
   currentOutpostList.push(outpostRoomName);
   this.memory.outposts.roomList = currentOutpostList;
 
-  console.log(this.link() + 'Outpost at ' + outpostRoomName + ' successfully registered.');
+  log('Outpost at ' + outpostRoomName + ' successfully registered.', this);
   return true;
 }
 
-Room.prototype.registerOutpostContainers   = function(outpostName: RoomName) {
+Room.prototype.registerOutpostContainers  = function(outpostName: RoomName) {
   if (typeof outpostName === 'string') { // CALLED FROM MASTER COLONY ROOM
     Game.rooms[outpostName].cacheObjects();
     if (Game.rooms[outpostName].memory.objects.containers !== undefined && Game.rooms[outpostName].memory.objects.containers.length > 0) {
@@ -1400,7 +1388,7 @@ Room.prototype.registerOutpostContainers   = function(outpostName: RoomName) {
       this.memory.outposts.aggregateContainerList = aggContainerList;
       const sourceListLen = this.memory.outposts.aggregateSourceList.length;
 
-      console.log(this.link() + 'New aggregate container list now includes ' + aggContainerList.length + ' items, for ' + sourceListLen + ' sources.');
+      log('New aggregate container list now includes ' + aggContainerList.length + ' items, for ' + sourceListLen + ' sources.', this);
       return;
     }
   } else if (typeof outpostName === 'undefined') { // CALLED FROM OUTPOST ROOM
@@ -1437,7 +1425,7 @@ Room.prototype.calcOutpostPotential       = function() {
   }
 }
 
-Room.prototype.registerLinks               = function() {
+Room.prototype.registerLinks              = function() {
 
   if (this.memory.data === undefined) this.memory.data = {};
   if (this.memory.objects.links === undefined) this.cacheObjects();
@@ -1465,11 +1453,11 @@ Room.prototype.registerLinks               = function() {
     linkSource2 = source2.pos.findInRange(FIND_MY_STRUCTURES, 3,{ filter: { structureType: STRUCTURE_LINK } });
     linkDestination = controller.pos.findInRange(FIND_MY_STRUCTURES, 3, { filter: { structureType: STRUCTURE_LINK } });
     linkRemotes = this.find(FIND_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && ((i.pos.x <= 4 || i.pos.x >= 45) && (i.pos.y <= 4 || i.pos.y >= 45)) });
-    console.log('linkRemotes: ' + linkRemotes);
+    log('linkRemotes: ' + linkRemotes, this);
 
     const linkRemotes2: StructureLink[] = Game.flags.remLink1.pos.findInRange(FIND_STRUCTURES, 1, { filter: { structureType: STRUCTURE_LINK } });
 
-    let linkReport = this.link() + ': LINK REGISTRATION REPORT:-------------------###';
+    let linkReport = 'LINK REGISTRATION REPORT:-------------------###';
 
     if (linkCentral.length > 0) {
       this.memory.data.linkRegistry.central = linkCentral[0].id;
@@ -1498,7 +1486,7 @@ Room.prototype.registerLinks               = function() {
 
     //this.registerLogisticalPairs();
 
-    console.log(linkReport);
+    log(linkReport, this);
 
     return linkReport;
 
@@ -1511,7 +1499,7 @@ Room.prototype.registerInvaderGroup       = function(rallyPoint: string | string
   if (Game.rooms[targetRoom])
     this.memory.data.attackRoom = targetRoom;
   else {
-    console.log(this.link() + 'Invalid targetRoom specified. Please provide a valid room name.');
+    log('Invalid targetRoom specified. Please provide a valid room name.', this);
     return;
   }
 
@@ -1524,10 +1512,10 @@ Room.prototype.registerInvaderGroup       = function(rallyPoint: string | string
 
 Room.prototype.setCraneSpot               = function(posX: number, posY: number) {
   this.memory.data.craneSpot = [posX, posY];
-  console.log(this.link() + 'Set craneSpot to ' + posX + ', ' + posY + '.');
+  log('Set craneSpot to ' + posX + ', ' + posY + '.', this);
 }
 
-Room.prototype.setRemoteTargets           = function (roomName: RoomName, roomXY: number[], waypoints: string | string[] | false = false, rbCount: number = 0, rlCount: number = 0, claimRoom: RoomName | false = false, override: boolean = false) {
+Room.prototype.setRemoteTargets           = function(roomName: RoomName, roomXY: number[], waypoints: string | string[] | false = false, rbCount: number = 0, rlCount: number = 0, claimRoom: RoomName | false = false, override: boolean = false) {
   if (override && this.memory.data.remoteWorkRoom !== roomName)
     return 'Current remoteWorkRoom already exists and override flag is not set.';
 
@@ -1557,14 +1545,14 @@ Room.prototype.setRemoteTargets           = function (roomName: RoomName, roomXY
       report += '\n>>>> WAYPOINTS: ' + waypoints;
   }
 
-  console.log(report);
+  log(report, this);
 }
 
-Room.prototype.link = function (): string {
+Room.prototype.link                       = function(): string {
     return `[<a href="#!/room/${Game.shard.name}/${this.name}">${this.name}</a>]: `;
 }
 
-Room.prototype.findRemoteLinks = function (): void {
+Room.prototype.findRemoteLinks            = function(): void {
 
   const northBox  = this.lookForAtArea(LOOK_STRUCTURES,   0,  0,  5, 49, true);
   const southBox  = this.lookForAtArea(LOOK_STRUCTURES,  44,  0, 49, 49, true);
@@ -1581,14 +1569,10 @@ Room.prototype.findRemoteLinks = function (): void {
   aggregateResults = aggregateResults.concat(westBox );
   aggregateResults = aggregateResults.concat(eastBox );
 
-  console.log(aggregateResults);
-
-  //if (aggregateResults.length) return aggregateResults;
-  //else return;
-  return;
+  log(aggregateResults.toString(), this);
 }
 
-Room.prototype.setCombatObjectives = function(attackRoom: RoomName, waypoints: string | string[], customTarget: Id<AnyStructure> | Id<AnyStructure>[] | false = false): boolean {
+Room.prototype.setCombatObjectives        = function(attackRoom: RoomName, waypoints: string | string[], customTarget: Id<AnyStructure> | Id<AnyStructure>[] | false = false): boolean {
 
   if (this.memory.data.combatObjectives === undefined)
     this.memory.data.combatObjectives = {};
