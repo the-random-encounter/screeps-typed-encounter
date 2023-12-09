@@ -1,6 +1,42 @@
 import { max } from "lodash";
 import { returnCode, validateRoomName, validateFlagName, log } from "./miscFunctions";
 
+Spawn.prototype.spawnCollector = function (name: string, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false, iteration: number = 0): ReturnCode {
+
+  if (!maxEnergy)
+    maxEnergy = this.room.energyCapacityAvailable;
+
+	const baseBody = [MOVE,MOVE,MOVE,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY];
+
+  while (!this.spawning) {
+    const result = this.spawnCreep(baseBody, name, { memory: { role: 'collector', roleForQuota: 'collector', homeRoom: this.room.name, rallyPoint: waypoints } });
+    let logMsg = 'Attempting to spawn a new claim builder (home: ' + this.room.name + ')...';
+
+    switch (result) {
+      case OK:
+        logMsg += '\n... SUCCESS! RESULT CODE: ' + returnCode(result);
+        log(logMsg, this.room);
+        break;
+      case ERR_NAME_EXISTS:
+        logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+        log(logMsg, this.room);
+        iteration++;
+        this.spawnCollector(name + iteration, waypoints, maxEnergy, iteration);
+        break;
+      case ERR_NOT_ENOUGH_RESOURCES:
+        logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+        log(logMsg, this.room);
+        this.spawnCollector(name, waypoints, maxEnergy);
+        break;
+      default:
+        break;
+    }
+
+    return returnCode(result);
+  }
+
+}
+
 Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ReturnCode {
 
 
@@ -61,7 +97,7 @@ Spawn.prototype.spawnWarrior = function (creepName: string, targetRoom: RoomName
 
   return returnCode(result);
 }
-Spawn.prototype.spawnNewClaimBuilder = function (targetRoom: RoomName, name: string = 'NewClaimBuilder', maxEnergy?: number): ReturnCode {
+Spawn.prototype.spawnNewClaimBuilder = function (targetRoom: RoomName, name: string = 'NewClaimBuilder', maxEnergy?: number, iteration: number = 0): ReturnCode {
 
   if (!maxEnergy)
     maxEnergy = this.room.energyCapacityAvailable;
@@ -70,17 +106,24 @@ Spawn.prototype.spawnNewClaimBuilder = function (targetRoom: RoomName, name: str
 
 	const result = this.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY], name, { memory: { role: 'builder', roleForQuota: 'unallocated', homeRoom: this.room.name, rallyPoint: claimObjective.waypoints, claimant: true } });
 
-  log('Spawning new claim harvester (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+  let logMsg = 'Attempting to spawn a new claim builder (home: ' + targetRoom + ')...';
 
   switch (result) {
     case OK:
       this.room.memory.data.claimRooms[targetRoom].neededBuilders -= 1;
+      logMsg += '\n... SUCCESS! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
       break;
     case ERR_NAME_EXISTS:
-      this.spawnNewClaimBuilder(targetRoom, name + '1', maxEnergy);
+      logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
+      iteration++;
+      this.spawnNewClaimBuilder(targetRoom, name + iteration, maxEnergy, iteration);
       break;
     case ERR_NOT_ENOUGH_RESOURCES:
-      this.spawnNewClaimBuilder(targetRoom, name + '1', maxEnergy);
+      logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
+      this.spawnNewClaimBuilder(targetRoom, name, maxEnergy);
       break;
     default:
       break;
@@ -88,7 +131,7 @@ Spawn.prototype.spawnNewClaimBuilder = function (targetRoom: RoomName, name: str
 
   return returnCode(result);
 }
-Spawn.prototype.spawnNewClaimHarvester = function (targetRoom: RoomName, name: string = 'NewClaimHarvester', maxEnergy?: number): ReturnCode {
+Spawn.prototype.spawnNewClaimHarvester = function (targetRoom: RoomName, name: string = 'NewClaimHarvester', maxEnergy?: number, iteration: number = 0): ReturnCode {
 
   if (!maxEnergy)
     maxEnergy = this.room.energyCapacityAvailable;
@@ -97,17 +140,24 @@ Spawn.prototype.spawnNewClaimHarvester = function (targetRoom: RoomName, name: s
 
 	const result = this.spawnCreep([CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK], name, { memory: { role: 'harvester', roleForQuota: 'unallocated', homeRoom: this.room.name, rallyPoint: claimObjective.waypoints, claimant: true } });
 
-  log('Spawning new claim harvester (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+  let logMsg = 'Attempting to spawn a new claim harvester (home: ' + targetRoom + ')...';
 
   switch (result) {
     case OK:
-      this.room.memory.data.claimRooms[targetRoom].neededHarvesters -= 1;
+      this.room.memory.data.claimRooms[targetRoom].neededBuilders -= 1;
+      logMsg += '\n... SUCCESS! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
       break;
     case ERR_NAME_EXISTS:
-      this.spawnNewClaimHarvester(targetRoom, name + '1', maxEnergy);
+      logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
+      iteration++;
+      this.spawnNewClaimHarvester(targetRoom, name + iteration, maxEnergy, iteration);
       break;
     case ERR_NOT_ENOUGH_RESOURCES:
-      this.spawnNewClaimHarvester(targetRoom, name + '1', maxEnergy);
+      logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
+      this.spawnNewClaimHarvester(targetRoom, name, maxEnergy);
       break;
     default:
       break;
@@ -115,7 +165,7 @@ Spawn.prototype.spawnNewClaimHarvester = function (targetRoom: RoomName, name: s
 
   return returnCode(result);
 }
-Spawn.prototype.spawnNewClaimHauler = function (targetRoom: RoomName, name: string = 'NewClaimHauler', maxEnergy?: number): ReturnCode {
+Spawn.prototype.spawnNewClaimHauler = function (targetRoom: RoomName, name: string = 'NewClaimHauler', maxEnergy?: number, iteration: number = 0): ReturnCode {
 
   if (!maxEnergy)
     maxEnergy = this.room.energyCapacityAvailable;
@@ -126,16 +176,24 @@ Spawn.prototype.spawnNewClaimHauler = function (targetRoom: RoomName, name: stri
 
   const result = this.spawnCreep(baseBody, name, { memory: { role: 'remotelogistician', roleForQuota: 'unallocated', homeRoom: targetRoom, rallyPoint: claimObjective.waypoints, destRoom: targetRoom, destPos: [claimObjective.logSpot.x, claimObjective.logSpot.y] } });
 
-  log('Spawning new claim hauler (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+  let logMsg = 'Attempting to spawn a new claim hauler (home: ' + targetRoom + ')...';
 
   switch (result) {
     case OK:
+      this.room.memory.data.claimRooms[targetRoom].neededBuilders -= 1;
+      logMsg += '\n... SUCCESS! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
       break;
     case ERR_NAME_EXISTS:
-      this.spawnNewClaimHauler(targetRoom, name + '1', maxEnergy);
+      logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
+      iteration++;
+      this.spawnNewClaimHauler(targetRoom, name + iteration, maxEnergy, iteration);
       break;
     case ERR_NOT_ENOUGH_RESOURCES:
-      this.spawnNewClaimHauler(targetRoom, name + '1', maxEnergy);
+      logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
+      this.spawnNewClaimHauler(targetRoom, name, maxEnergy);
       break;
     default:
       break;
@@ -143,7 +201,7 @@ Spawn.prototype.spawnNewClaimHauler = function (targetRoom: RoomName, name: stri
 
   return returnCode(result);
 }
-Spawn.prototype.spawnClaimer = function (claimRoom: RoomName, name: string = 'Claimer', canHaul: boolean = false, maxEnergy?: number): ReturnCode {
+Spawn.prototype.spawnClaimer = function (claimRoom: RoomName, name: string = 'Claimer', canHaul: boolean = false, maxEnergy?: number, iteration: number = 0): ReturnCode {
 
   if (!maxEnergy)
     maxEnergy = this.room.energyCapacityAvailable;
@@ -158,15 +216,24 @@ Spawn.prototype.spawnClaimer = function (claimRoom: RoomName, name: string = 'Cl
 
 	const result = this.spawnCreep(baseBody, name, { memory: { role: 'claimer', roleForQuota: 'claimer', homeRoom: homeRoom, claimRoom: claimRoom, remoteWaypoints: claimObjective.waypoints } });
 
-	log('Spawning claimer (home: ' + homeRoom + ') (claim: ' + claimRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+  let logMsg = 'Attempting to spawn a new claimer (home: ' + claimRoom + ')...';
+
   switch (result) {
     case OK:
+      this.room.memory.data.claimRooms[claimRoom].neededBuilders -= 1;
+      logMsg += '\n... SUCCESS! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
       break;
     case ERR_NAME_EXISTS:
-      this.spawnClaimer(claimRoom, name + '1', canHaul, maxEnergy);
+      logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
+      iteration++;
+      this.spawnClaimer(claimRoom, name + iteration, canHaul, maxEnergy, iteration);
       break;
     case ERR_NOT_ENOUGH_RESOURCES:
-      this.spawnClaimer(claimRoom, name + '1', canHaul, maxEnergy);
+      logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+      log(logMsg, this.room);
+      this.spawnClaimer(claimRoom, name, canHaul, maxEnergy);
       break;
     default:
       break;
@@ -196,7 +263,7 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy?
 		case 'builder':
 
 			break;
-		case 'collector': {
+		case 'filler': {
       const maxCarryCost  : number = Math.round((maxEnergy    / 3) * 2   / 50) * 50;
       const maxMoveCost   : number = Math.ceil (maxEnergy     / 3  / 50) * 50;
       let   maxCarryParts : number = Math.floor(maxCarryCost  / 50);
@@ -209,8 +276,10 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy?
 
       const bodyArray: BodyPartConstant[] = moveArray.concat(carryArray);
       return bodyArray;
-			break;
     }
+    case 'collector':
+
+      break;
 		case 'repairer':
 
 			break;
@@ -281,7 +350,9 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy?
           }
         }
       }
-      let finalCarry: number, finalMove: number, finalWork: number;
+      let finalCarry: number = 0;
+      let finalMove : number = 0;
+      let finalWork : number = 0;;
 
       _.forEach(bodyArray, (part: BodyPartConstant) => {
         if      (part === CARRY)  finalCarry++;
