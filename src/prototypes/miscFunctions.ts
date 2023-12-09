@@ -1,5 +1,11 @@
 "use strict";
-export function calcTickTime(tickSamples: number = 1000) { // Call this from 1st line of main loop. Can adjust samples used for calculation from there.
+
+/**
+ *  Used to determine how many seconds each server tick is lasting on average
+ * @param tickSamples How many sample ticks to log before averaging out the time of each tick
+ * @returns 'Done'
+ */
+export function calcTickTime(tickSamples: number = 1000): string { // Call this from 1st line of main loop. Can adjust samples used for calculation from there.
   let millis: number = Date.now();
 
   // Set some sane defaults
@@ -33,6 +39,10 @@ export function calcTickTime(tickSamples: number = 1000) { // Call this from 1st
   return 'Done';
 }
 
+/**
+ *  Get a random name!
+ * @returns The name for your creep!
+ */
 export function randomName() {
 
   const nameArray = [ 'Olivia' , 'Emma'     , 'Charlotte', 'Amelia' , 'Sophia', 'Isabella', 'Ava'   , 'Mia'   , 'Evelyn'  , 'Luna'   , 'Harper', 'Camila' , 'Sofia' ,  'Scarlett', 'Elizabeth', 'Eleanor', 'Emily' , 'Chloe'   , 'Mila'  , 'Violet', 'Penelope', 'Gianna' , 'Aria'  , 'Abigail', 'Ella'  , 'Avery'    , 'Hazel'    , 'Nora'   , 'Layla' , 'Lily'    , 'Aurora', 'Nova'  , 'Ellie'   , 'Madison', 'Grace' , 'Isla'   , 'Willow', 'Christian', 'Riley'    , 'Stella' , 'Eliana', 'Victoria', 'Emilia', 'Zoey'  , 'Ivy'     , 'Naomi'  , 'Hannah', 'Lucy'   , 'Elena' , 'Lillian'  , 'Paisley'  , 'Addison', 'Maya'  , 'Natalie' , 'Leah'  , 'Everly', 'Delilah' , 'Madelyn', 'Ruby'  , 'Leilani', 'Sophie', 'Kinsley'  , 'Genesis'  , 'Claire' , 'Audrey', 'Aaliyah' , 'Alice' , 'Sadie' , 'Autumn'  , 'Quinn'  , 'Cora'  , 'Kennedy', 'Athena', 'Josephine', 'Valentina', 'Natalia', 'Hailey', 'Brooklyn', 'Aubrey', 'Emery' , 'Savannah', 'Bella'  , 'Eloise', 'Skylar' , 'Ariana', 'Caroline' , 'Gabriella', 'Adeline', 'Nevaeh', 'Serenity', 'Maria' , 'Lydia' , 'Liliana' , 'Sarah'  , 'Oliver', 'Elijah' , 'Anna'  , 'Everleigh', 'Raelynn'  , 'William', 'Henry' , 'Benjamin', 'Iris'  , 'Jade'  , 'Theodore', 'Mateo'  , 'Daniel', 'James'  , 'Lucas' , 'Sebastian', 'Alexander', 'Michael', 'Asher' , 'Samuel'  , 'Ethan' , 'Mason' , 'Jackson' , 'Hudson' , 'Joseph', 'Gabriel', 'Julian', 'Maverick' , 'Santiago' , 'Grayson', 'Cooper', 'Matthew' , 'Andrew', 'Nathan', 'Jeremiah', 'Lincoln', 'Thomas', 'Anthony', 'Jayden', 'Jonathan' , 'Nicholas' , 'Cameron', 'Carter', 'Leonardo', 'Adrian', 'Waylon', 'Everett' , 'Jameson', 'Wyatt' , 'Wesley' , 'Robert', 'Ezekiel'  , 'Bennett'  , 'Greyson', 'Xavier', 'Charles' , 'Josiah', 'Dylan' , 'Isaiah'  , 'Joshua' , 'Brooks', 'Walker' , 'Easton', 'Weston'   , 'Landon'   , 'Colton' , 'Jordan', 'Parker'  , 'Rowan' , 'Caleb' , 'Silas'   , 'Axel'   , 'Jose'  , 'Isaac'  , 'Elias' , 'Micah'    , 'Aiden'    , 'David'  , 'Jacob' , 'Logan'   , 'Miles' , 'Angel' , 'Nolan'   , 'Jaxon'  , 'Roman' , 'Aaron'  , 'Beau'  , 'Adam'     , 'Theo'     , 'Ayla'   , 'Liam'  , 'Noah'    , 'Levi'  , 'Jack'  , 'Owen'    , 'Ezra'   , 'John'  , 'Luca'   , 'Luke'  , 'Ryan'     , 'Kai'      , 'Eli'    , 'Leo'   , 'Zoe'     , 'Ian'   , 'Christopher' ];
@@ -85,8 +95,19 @@ export function partCost(array: Array<BodyPartConstant>) {
   return runningTotal;
 }
 
+/**
+ * A simple alias for the Game.getObjectById() method
+ * @param ID The id of an object
+ * @returns The game object of the ID
+ */
 export function GOBI(ID: Id<AnyCreep | AnyStructure | ConstructionSite | Resource | Tombstone>) {  return Game.getObjectById(ID); }
 
+/**
+ *  A simple alias for Game.creeps[name].move(), easier to call from console
+ * @param name The name of the creep
+ * @param dir The directional constant to  move
+ * @returns void
+ */
 export function MC(name: string, dir: DirectionConstant) {
 
   switch (dir) {
@@ -128,7 +149,13 @@ export function MC(name: string, dir: DirectionConstant) {
   return Game.creeps[name].move(dir)
 }
 
-export function visualRCProgress(controller: StructureController) {
+
+/**
+ *
+ * @param {StructureController} controller   The controller object that will display the info
+ * @return void;
+ */
+export function visualRCProgress(controller: StructureController): void {
 
   function add(acc: number, a: number) { return acc + a; }
   let lvlColor: string;
@@ -232,6 +259,11 @@ export function visualRCProgress(controller: StructureController) {
       { align: alignment, opacity: 0.8, color: '#000000', font: fontSize - .1, stroke: '#ffaa00' });
 }
 
+/**
+ *  Takes a number array as input and returns the average
+ * @param array The array used for calculation
+ * @returns The array's average value
+ */
 function avgArray(array: number[]): number[] {
 
   function add(acc: number, a: number): number { return acc + a; }
@@ -243,6 +275,12 @@ function avgArray(array: number[]): number[] {
 
   return newArr;
 }
+
+/**
+ *  Converts raw seconds into days/hours/minutes/seconds
+ * @param seconds The number of seconds to convert
+ * @returns The string value of "Xd Xh Xm Xs"
+ */
 export function secondsToDhms(seconds: number) {
 seconds = Number(seconds);
 var d: number = Math.floor(seconds / (3600*24));
@@ -421,10 +459,6 @@ export function randomColor() { // Random color returned as CONSTANT
 
 export function randomColorAsInt() { // Random color returned as INTEGER
   return randomInt(1, 10);
-}
-
-export function spawnClaimerForCarry() {
-  return Game.spawns.Spawn1.spawnCreep([CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE], 'CarryClaimer', { memory: { role: 'claimer', roleForQuota: 'claimer', homeRoom: 'E58S51', claimRoom: 'E59S48' } });
 }
 
 export function col(colNum: number) {
@@ -724,11 +758,11 @@ export function repairProgress(building: AnyStructure, room: Room): void {
   }
 
   room.visual.rect(building.pos.x - boxX, building.pos.y + .65, boxWidth, .5, { fill: boxColor, opacity: 0.5, stroke: repColor, strokeWidth: 0.05, lineStyle: 'solid' });
-
-  room.visual.text(repPercent + '%', building.pos.x, building.pos.y + 1.025, { stroke: boxColor, strokeWidth: 0.025, color: repColor, font: 0.35 });
+  room.visual.rect(building.pos.x - boxX + 0.05, building.pos.y + .68, boxWidth - .1, .43, { fill: 'transparent', opacity: 0.8, stroke: '#000000', strokeWidth: 0.025, lineStyle: 'solid' });
+  room.visual.text(repPercent + '%', building.pos.x, building.pos.y + 1.025, { stroke: '#000000', strokeWidth: 0.025, color: repColor, font: 0.35 });
 }
 
-export function returnCode(rCode: ScreepsReturnCode): string {
+export function returnCode(rCode: ScreepsReturnCode): ReturnCode {
   switch (rCode) {
     case 0:
       return 'OK';
@@ -763,6 +797,13 @@ export function returnCode(rCode: ScreepsReturnCode): string {
   }
 }
 
+/**
+ *
+ * @param {string}   logMsg  A string that is to be logged to console
+ * @param {string[]} logMsg  An array of strings that are to be logged to console
+ * @param {Room}     room    A copy of the room object where the log message originated, if available
+ *
+ */
 export function log(logMsg: string | string[], room: Room | false = false): void {
   if (logMsg instanceof Array) {
     let finalLog: string;

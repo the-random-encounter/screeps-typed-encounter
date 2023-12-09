@@ -6,4 +6,3 @@ description: >-
 ---
 
 # Bot Behavior
-

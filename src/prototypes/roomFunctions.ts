@@ -1,5 +1,6 @@
 import { calcPath, validateRoomName, randomColor, createRoomFlag, log } from './miscFunctions';
 
+Room.prototype.RLP                        = function(): boolean { return this.registerLogisticalPairs(); }
 Room.prototype.clearPPT                   = function() { this.clearRCLCounter(); }
 Room.prototype.enableCSL                  = function() { this.enableCentralStorageLogic (); }
 Room.prototype.disableCSL                 = function() { this.disableCentralStorageLogic(); }
@@ -397,7 +398,7 @@ Room.prototype.initTargets                = function(targetArray: number[] | fal
       this.memory.targets = {};
 
     this.memory.targets.harvester = 2;
-    this.memory.targets.collector = 2;
+    this.memory.targets.filler = 2;
     this.memory.targets.runner = 0;
     this.memory.targets.builder = 2;
     this.memory.targets.upgrader = 1;
@@ -425,7 +426,7 @@ Room.prototype.initTargets                = function(targetArray: number[] | fal
     }
 
     this.memory.targets.harvester = targetArray[0];
-    this.memory.targets.collector = targetArray[1];
+    this.memory.targets.filler = targetArray[1];
     this.memory.targets.runner = targetArray[2];
     this.memory.targets.builder = targetArray[3];
     this.memory.targets.upgrader = targetArray[4];
@@ -579,8 +580,9 @@ Room.prototype.initSettings               = function() {
   return;
 }
 
-Room.prototype.registerLogisticalPairs    = function () {
+Room.prototype.registerLogisticalPairs    = function (): boolean {
 
+  //* Discover all resource locations, and any links in the room
   const sources:       Source[]                 = this.find(FIND_SOURCES);
   const minerals:      Mineral[]                = this.find(FIND_MINERALS);
   const linkDrops:     StructureLink[]          = this.find(FIND_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && ((i.pos.x <= 4 || i.pos.x >= 45) || (i.pos.y <= 4 || i.pos.y >= 45)) });
@@ -594,20 +596,24 @@ Room.prototype.registerLogisticalPairs    = function () {
   if (extractor.length)
     extractorBuilt = true;
 
+  //* If there is a container by a mineral spot, put it's ID in the mineralOutbox
   if (minerals) {
     const mineralOutboxArray: Array<StructureContainer> = minerals[0].pos.findInRange(FIND_STRUCTURES, 3, { filter: { structureType: STRUCTURE_CONTAINER } });
     if (mineralOutboxArray.length > 0) mineralOutbox = mineralOutboxArray[0].id;
   }
 
+  //* If there is a container by the controller, put it's ID in the energyInbox
   const energyInboxArray: Array<StructureContainer> = this.controller.pos.findInRange(FIND_STRUCTURES, 5, { filter: { structureType: STRUCTURE_CONTAINER } });
   if (energyInboxArray.length > 0) energyInbox = energyInboxArray[0].id;
 
+  //* Capture the room storage ID, if it exists
   let storage: Id<StructureStorage>;
   if (this.storage) storage = this.storage.id;
 
+  //* Get outbox & inbox arrays from the room settings
   let roomOutboxes: Array<Id<StructureContainer>> = this.memory.settings.containerSettings.outboxes || [];
   let roomInboxes: Array<Id<StructureContainer>> = this.memory.settings.containerSettings.inboxes || [];
-
+  //* Find any containers by energy sources, put their IDs in the energyOutboxes
   for (let i = 0; i < sources.length; i++) {
     let sourceBox: Array<StructureContainer> = sources[i].pos.findInRange(FIND_STRUCTURES, 3, { filter: { structureType: STRUCTURE_CONTAINER } });
     if (sourceBox.length > 0)  energyOutboxes.push(sourceBox[0].id);
@@ -617,17 +623,20 @@ Room.prototype.registerLogisticalPairs    = function () {
   else {
     if (this.memory.data.noPairs) delete this.memory.data.noPairs;
   }
-
+  //* Ensure that our found energyOutboxes conform to the room's container memory
   for (let i = 0; i < energyOutboxes.length; i++) {
     if (!roomOutboxes.includes(energyOutboxes[i])) roomOutboxes.push(energyOutboxes[i]);
     this.setOutbox(energyOutboxes[i]);
   }
+  //* Ensure that our found energyInbox conforms to the room's container memory
+  if (!roomInboxes.includes(energyInbox)) {
+     roomInboxes.push(energyInbox);
+    this.memory.settings.containerSettings.inboxes = roomInboxes;
+  }
 
-  if (!roomInboxes.includes(energyInbox))  roomInboxes.push(energyInbox);
-
-  this.memory.settings.containerSettings.inboxes = roomInboxes;
-
+  //* For room's with a storage built
   if (this.storage) {
+    //* Build the local source to storage pairs
     for (let i = 0; i < energyOutboxes.length; i++) {
       const onePair: LogisticsPair = { source: energyOutboxes[i], destination: storage, resource: 'energy', locality: 'local', descriptor: 'source to storage' };
       if (onePair.source && onePair.destination) logisticalPairs.push(onePair);
@@ -637,12 +646,15 @@ Room.prototype.registerLogisticalPairs    = function () {
     if (this.memory.outposts) {
       const remoteContainers: Array<Id<StructureContainer>> = this.memory.outposts.aggregateContainerList;
       for (let i = 0; i < remoteContainers.length; i++) {
+        //* For rooms with remote links
         if (linkDrops.length > 0) {
+          //* Build the remote source box to remote link pairs
           for (let j = 0; j < linkDrops.length; j++) {
             const remotePair: LogisticsPair = { source: remoteContainers[i], destination: linkDrops[j].id, resource: 'energy', locality: 'remote', descriptor: 'source to homelink' };
             if (remotePair.source && remotePair.destination) logisticalPairs.push(remotePair);
             else log('Malformed Pair: ' + remotePair, this);
           }
+        //* For rooms without remote links, build the remote source box to storage pairs
         } else {
           const remotePair: LogisticsPair = { source: remoteContainers[i], destination: storage, resource: 'energy', locality: 'remote', descriptor: 'source to storage'};
           if (remotePair.source && remotePair.destination) logisticalPairs.push(remotePair);
@@ -650,12 +662,15 @@ Room.prototype.registerLogisticalPairs    = function () {
         }
       }
     }
+
+    //* Build the storage to upgrader box pair
     if (energyInbox.length > 0) {
       const onePairStoU: LogisticsPair = { source: storage, destination: energyInbox, resource: 'energy', locality: 'local', descriptor: 'storage to upgrader' };
       if (onePairStoU.source && onePairStoU.destination) logisticalPairs.push(onePairStoU);
       else log('Malformed Pair: ' + onePairStoU, this);
     }
 
+    //* Build the extractor box to storage pair
     if (extractorBuilt && typeof mineralOutbox === 'string') {
       log('mineralOutbox: ' + mineralOutbox, this);
       log('storage: ' + storage, this);
@@ -664,7 +679,9 @@ Room.prototype.registerLogisticalPairs    = function () {
       if (onePair.source && onePair.destination) logisticalPairs.push(onePair);
       else log('Malformed Pair: ' + onePair, this);
     }
+    //* For rooms without storage
   } else {
+    //* Build the local source to upgrader box pairs
     for (let i = 0; i < energyOutboxes.length; i++) {
       const onePair: LogisticsPair = { source: energyOutboxes[i], destination: energyInbox, resource: 'energy', locality: 'local', descriptor: 'source to upgrader'};
       if (onePair.source && onePair.destination) logisticalPairs.push(onePair);
@@ -672,25 +689,7 @@ Room.prototype.registerLogisticalPairs    = function () {
     }
   }
 
-  let pairReport: string[];
-  if (!this.memory.data) this.memory.data = {};
-  if (!this.memory.data.logisticalPairs) this.memory.data.logisticalPairs = [];
-  if (!this.memory.data.pairCounter) this.memory.data.pairCounter = 0;
-  if (logisticalPairs.length > 1) {
-    pairReport = ['------------------------------------------------- REGISTERED LOGISTICAL PAIRS --------------------------------------------------\n'];
-    for (let i = 0; i < logisticalPairs.length; i++)
-      pairReport.push(' PAIR #' + (i+1) + ': OUTBOX> ' + logisticalPairs[i].source + ' | INBOX> ' + logisticalPairs[i].destination + ' | CARGO> ' + logisticalPairs[i].resource + ' | LOCALITY> ' + logisticalPairs[i].locality + ' | TYPE> ' + logisticalPairs[i].descriptor + '\n');
-  } else pairReport = ['No pairs available to register properly.'];
-
-  this.memory.data.logisticalPairs = logisticalPairs;
-
-
-  if (this.memory.data.pairPaths) {
-    delete this.memory.data.pairPaths;
-    this.memory.data.pairPaths = [];
-  }
-  if (!this.memory.data.pairPaths) this.memory.data.pairPaths = [];
-
+  //* Calculate the path lengths for each pair and append
   for (let i = 0; i < logisticalPairs.length; i++) {
 
     const pair = logisticalPairs[i];
@@ -700,12 +699,51 @@ Room.prototype.registerLogisticalPairs    = function () {
 
     let pathObj = calcPath(startPos.pos, endPos.pos);
     let pathLen: number = pathObj.length;
-    this.memory.data.logisticalPairs[i].distance = pathLen;
+    logisticalPairs[i].distance = pathLen;
 
   }
 
+  //* For path lengths over 60, cut the length in half and create two pairs (this will divide the job into two runners, lessening the energy burden for lower room levels)
+  let finalizedPairs: LogisticsPair[] = [];
+  for (let i = 0; i < logisticalPairs.length; i++) {
+    if (logisticalPairs[i].distance >= 60) {
+      let clonedHalfPair: LogisticsPair = logisticalPairs[i];
+      clonedHalfPair.distance = Math.ceil(clonedHalfPair.distance / 2);
+      finalizedPairs.push(clonedHalfPair);
+      finalizedPairs.push(clonedHalfPair);
+    } else {
+      const clonedPair: LogisticsPair = logisticalPairs[i];
+      finalizedPairs.push(clonedPair);
+    }
+  }
+  //* Ensure data objects exist
+
+  if (!this.memory.data) this.memory.data = {};
+  if (!this.memory.data.logisticalPairs) this.memory.data.logisticalPairs = [];
+  if (!this.memory.data.pairCounter) this.memory.data.pairCounter = 0;
+  //* Clear the pair paths if they exist already
+  if (this.memory.data.pairPaths) {
+    delete this.memory.data.pairPaths;
+    this.memory.data.pairPaths = [];
+  }
+  //* Ensure the pair paths do exist, though
+  if (!this.memory.data.pairPaths) this.memory.data.pairPaths = [];
+
+  //* Prepare the pair report
+  let pairReport: string[];
+  if (finalizedPairs.length > 1) {
+    pairReport = ['------------------------------------------------- REGISTERED LOGISTICAL PAIRS --------------------------------------------------'];
+    for (let i = 0; i < finalizedPairs.length; i++)
+      pairReport.push(' PAIR #' + (i+1) + ': OUTBOX> ' + finalizedPairs[i].source + ' | INBOX> ' + finalizedPairs[i].destination + ' | CARGO> ' + finalizedPairs[i].resource + ' | LOCALITY> ' + finalizedPairs[i].locality + ' | TYPE> ' + finalizedPairs[i].descriptor + '');
+  } else pairReport = ['No pairs available to register properly.'];
+
+  //* Push those pairs to memory and set the runner spawn target to match the number of pairs
+  this.memory.data.logisticalPairs = finalizedPairs;
+
   this.setTarget('runner', this.memory.data.logisticalPairs.length);
-  return pairReport;
+  log(pairReport, this);
+  if (finalizedPairs.length > 1) return true;
+  else return false;
 }
 
 Room.prototype.setRepairRampartsTo        = function(percentMax: number) {
@@ -1534,7 +1572,10 @@ Room.prototype.setRemoteTargets           = function(roomName: RoomName, roomXY:
     }
   }
   if (claimRoom) {
-    this.memory.data.claimRoom = roomName;
+    if (waypoints)
+      this.setClaimObjective(roomName, roomXY, 40000, 2, 2, waypoints);
+    else
+      this.setClaimObjective(roomName, roomXY, 40000, 2, 2, 'none');
   }
   this.memory.data.remoteWorkRoom = roomName;
 
@@ -1584,4 +1625,32 @@ Room.prototype.setCombatObjectives        = function(attackRoom: RoomName, waypo
     this.memory.data.combatObjectives.customAttackTargets = customTarget;
 
   return true;
+}
+
+Room.prototype.setClaimObjective          = function(claimRoom: RoomName, logSpot: number[], initialEnergy: number, neededHarvesters: number, neededBuilders: number, waypoints: string | string[] = 'none'): boolean {
+
+  const rMem = this.memory;
+  const rMemData = rMem.data;
+
+  if (rMemData.claimRooms === undefined) rMemData.claimRooms = {};
+
+  if (rMemData.claimRooms[claimRoom] === undefined) {
+    const newClaimRoom = {
+      roomName: claimRoom,
+      logSpot: {x: logSpot[0], y: logSpot[1]},
+      initialEnergy: initialEnergy,
+      energyRemaining: initialEnergy,
+      neededHarvesters: neededHarvesters,
+      neededBuilders: neededBuilders,
+      waypoints: waypoints,
+      hasBeenClaimed: false,
+      claimerSpawned: false
+    };
+    rMemData.claimRooms[claimRoom] = newClaimRoom;
+    log('New claim room objective set!', this);
+    return true;
+  } else {
+    log('ERROR: There is already a claim room objective for this room created.', this);
+    return false;
+  }
 }
