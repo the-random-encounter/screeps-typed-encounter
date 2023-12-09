@@ -1762,7 +1762,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
           else readySpawn = thisSpawn;
         }
         if (!readySpawn.spawning) {
-          log(readySpawn.pos.link() + readySpawn.name + ': Ready for spawning', room);
           const numCreeps: number = Object.keys(Game.creeps).length;
           if (numCreeps == 0 && room.energyAvailable <= 300 && (!room.storage || (room.storage &&  room.storage.store[RESOURCE_ENERGY] < 500)) && room.controller.level > 1) {
             newName = colonyName + '_Rb' + rebooterCount;
