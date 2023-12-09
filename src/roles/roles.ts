@@ -2,7 +2,6 @@ import { repairProgress, log } from '../prototypes/miscFunctions';
 
 export const roleBuilder = {
 
-  /** @param {Creep} creep **/
   run: function (creep: Creep) {
 
       const room: Room = creep.room;
@@ -29,7 +28,7 @@ export const roleBuilder = {
             cMem.working = true;
             creep.say('🏗️');
           }
-
+          if (cMem.claimant && rMem.objects.spawns.length > 0) delete cMem.claimant;
           if (pos.x == 49) creep.move(LEFT);
           else if (pos.x == 0) creep.move(RIGHT);
           else if (pos.y == 49) creep.move(TOP);
@@ -138,13 +137,14 @@ export const roleBuilder = {
               switch (result) {
                 case OK:
                   if (cMem.claimant)
-                    Game.rooms[cMem.homeRoom].memory.data.claimRooms[room.name as RoomName].energyRemaining -= (creep.getActiveBodyparts(WORK) * 25);
+                    Game.rooms[cMem.homeRoom].memory.data.claimRooms[room.name as RoomName].energyRemaining -= (creep.getActiveBodyparts(WORK) * 5);
                   break;
                 case ERR_NOT_IN_RANGE:
                   creep.moveTo(target, pathing.builderPathing);
                   break;
                 default:
-                  break;        creep.moveTo(target, pathing.builderPathing);
+                  break;
+                  creep.moveTo(target, pathing.builderPathing);
               }
             } else { //: NO BUILDINGS, DO REPAIRS IF NO REPAIRERS
               const repairers = room.find(FIND_MY_CREEPS, { filter: (i) => i.memory.role === 'repairer' });
@@ -301,6 +301,194 @@ export const roleClaimer = {
   }
 }
 export const roleCollector = {
+
+  run: function (creep: Creep) {
+
+    const room:  Room          = creep.room;
+    const cMem:  CreepMemory   = creep.memory;
+    const rMem:  RoomMemory    = room.memory;
+    const pos :  RoomPosition  = creep.pos;
+
+    if (cMem.disableAI  === undefined) cMem.disableAI  = false;
+    if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
+    if (room.storage && !cMem.pickup) cMem.pickup = room.storage.id;
+
+    if (!cMem.disableAI) { //: MY AI ISN'T DISABLED, SO...
+
+      if (cMem.rallyPoint == 'none') { //: I HAVE NO RALLY POINT, SO...
+
+        if (pos.x == 49) creep.move(LEFT);
+        else if (pos.x == 0) creep.move(RIGHT);
+        else if (pos.y == 49) creep.move(TOP);
+        else if (pos.y == 0) creep.move(BOTTOM);
+
+        if (creep.ticksToLive <= 2) creep.say('☠️');
+
+        if (creep.store.getFreeCapacity() > 0) {
+          const piles = room.find(FIND_DROPPED_RESOURCES);
+          if (piles.length) {
+            const nearestPile = pos.findClosestByRange(piles);
+            if (nearestPile) {
+              if (creep.pickup(nearestPile) === ERR_NOT_IN_RANGE)
+                creep.moveTo(nearestPile, pathing.collectorPathing);
+            }
+          } else {
+            const tombstones = room.find(FIND_TOMBSTONES, {filter: (i) => i.store.getUsedCapacity() > 0});
+
+            if (tombstones.length) {
+              const nearestStone = pos.findClosestByRange(tombstones);
+              if (nearestStone) {
+                const stoneInv = Object.keys(nearestStone) as ResourceConstant[];
+                if (creep.withdraw(nearestStone, stoneInv[0]) === ERR_NOT_IN_RANGE)
+                  creep.moveTo(nearestStone, pathing.collectorPathing);
+              }
+            }
+          }
+        } else {
+          if (room.storage) {
+            const storage = room.storage;
+            const inventory = Object.keys(creep.store) as ResourceConstant[];
+            if (creep.transfer(storage, inventory[0]) === ERR_NOT_IN_RANGE)
+              creep.moveTo(storage, pathing.collectorPathing);
+          } else {
+            const extensions = room.find(FIND_MY_STRUCTURES, { filter: (i) => i.structureType === STRUCTURE_EXTENSION && i.store.getFreeCapacity(RESOURCE_ENERGY) > 0});
+            const spawns = room.find(FIND_MY_STRUCTURES, { filter: (i) => i.structureType === STRUCTURE_SPAWN && i.store.getFreeCapacity(RESOURCE_ENERGY) > 0});
+            const needsFilling = extensions.concat(spawns);
+
+            if (needsFilling.length) {
+              const closestFill = pos.findClosestByRange(needsFilling);
+              if (closestFill) {
+                if (creep.transfer(closestFill, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
+                  creep.moveTo(closestFill, pathing.collectorPathing);
+              }
+            } else {
+              const inbox = room.controller.pos.findInRange(FIND_STRUCTURES, 3, { filter: (i) => i.structureType === STRUCTURE_CONTAINER && i.store.getFreeCapacity(RESOURCE_ENERGY) > 0});
+
+              if (inbox.length) {
+                const theBox = pos.findClosestByRange(inbox);
+                if (theBox) {
+                  if (creep.transfer(theBox, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE)
+                    creep.moveTo(theBox, pathing.collectorPathing);
+                }
+              }
+            }
+          }
+        }
+      } else
+        navRallyPoint(creep);
+    } else
+    aiAlert(creep);
+  }
+}
+export const roleCrane = {
+
+  run: function (creep: Creep) {
+
+    const room: Room = creep.room;
+    const cMem: CreepMemory = creep.memory;
+    const rMem: RoomMemory = room.memory;
+    const pos: RoomPosition = creep.pos;
+
+    if (cMem.disableAI === undefined) cMem.disableAI = false;
+    if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
+
+    if (!cMem.disableAI) {
+
+      if (cMem.rallyPoint == 'none') {
+
+        if (pos.x == 49) creep.move(LEFT);
+        else if (pos.x == 0) creep.move(RIGHT);
+        else if (pos.y == 49) creep.move(TOP);
+        else if (pos.y == 0) creep.move(BOTTOM);
+
+        if (!cMem.link) cMem.link = rMem.data.linkRegistry.central;
+        if (!cMem.storage) cMem.storage = rMem.objects.storage;
+        //if (!cMem.terminal && rMem.objects.terminal) cMem.terminal = rMem.objects.terminal[0];
+        if (!cMem.destination && rMem.data.linkRegistry.destination) cMem.destination = rMem.data.linkRegistry.destination;
+        if (!cMem.atCraneSpot === undefined) cMem.atCraneSpot = false;
+        if (cMem.upgrading == true && creep.store.getUsedCapacity() == 0) cMem.upgrading = false;
+
+        const objLink: StructureLink = Game.getObjectById(cMem.link);
+        const objStorage: StructureStorage = Game.getObjectById(cMem.storage);
+        const objTerminal: StructureTerminal = Game.getObjectById(cMem.terminal);
+        const objDestination: StructureLink = Game.getObjectById(cMem.destination);
+
+        let craneSpot = rMem.data.craneSpot;
+
+
+        if (!cMem.atCraneSpot) {
+          if (pos.x !== craneSpot[ 0 ] || pos.y !== craneSpot[ 1 ]) {
+            creep.moveTo(new RoomPosition(craneSpot[ 0 ], craneSpot[ 1 ], room.name), pathing.cranePathing);
+          } else {
+            cMem.atCraneSpot = true;
+            //log('crane at spot', room);
+          }
+        }
+
+        if (cMem.atCraneSpot == true) {
+          if (creep.store.getFreeCapacity() == 0 && cMem.dropLink == false) {
+            //log('full inventory, droplink false', room);
+            const resTypes: ResourceConstant[] = Object.keys(creep.store) as ResourceConstant[];
+            for (let types of resTypes) {
+              if (types !== RESOURCE_ENERGY)
+                creep.transfer(objStorage, types)
+            }
+          }
+
+          if (cMem.dropLink == true) {
+            //log('droplink true', room);
+            creep.transfer(objStorage, RESOURCE_ENERGY)
+            creep.say('🎇');
+            cMem.dropLink = false;
+            cMem.upgrading = false;
+            return;
+          } else if (creep.store[ RESOURCE_ENERGY ] > 0 && cMem.xferDest == true) {
+            creep.transfer(objLink, RESOURCE_ENERGY);
+            creep.say('🎆');
+            if (objLink.store[ RESOURCE_ENERGY ] > 700) {
+              cMem.xferDest = false;
+              cMem.upgrading = false;
+              objLink.transferEnergy(objDestination);
+            }
+            return;
+          } else if (creep.store.getFreeCapacity(RESOURCE_ENERGY) == 0 && cMem.upgrading == false) {
+            //log('free energy capacity is zero, upgrading is false', room);
+            creep.transfer(objStorage, RESOURCE_ENERGY);
+            creep.say('🎇');
+          } else {
+            if (objLink.store[ RESOURCE_ENERGY ] >= 30) {
+              //log('link store >= 30', room);
+              if (creep.withdraw(objLink, RESOURCE_ENERGY) == OK) {
+                creep.say('⚡');
+                cMem.dropLink = true;
+                cMem.upgrading = false;
+                return;
+              }
+            } else if ((rMem.settings.flags.craneUpgrades) && (cMem.upgrading == false)) {
+              if (creep.store.getUsedCapacity() == 0) {
+                creep.withdraw(objStorage, RESOURCE_ENERGY);
+                creep.say('⚡');
+                cMem.upgrading = true;
+              } else {
+                creep.upgradeController(room.controller)
+              }
+            } else if (objDestination && objDestination.store.getFreeCapacity(RESOURCE_ENERGY) >= objLink.store.getUsedCapacity(RESOURCE_ENERGY) && objLink.cooldown == 0) {
+              if (creep.store.getFreeCapacity() > 0) {
+                //log('crane: getting energy for C2D xfer', room);
+                creep.withdraw(objStorage, RESOURCE_ENERGY);
+                creep.say('⚡');
+                cMem.xferDest = true;
+              }
+            }
+          }
+        }
+      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
+        navRallyPoint(creep);
+    } else
+      aiAlert(creep);
+  }
+}
+export const roleFiller = {
 
   run: function (creep: Creep) {
 
@@ -504,123 +692,14 @@ export const roleCollector = {
     }
   }
 }
-export const roleCrane = {
-
-  run: function (creep: Creep) {
-
-    const room: Room = creep.room;
-    const cMem: CreepMemory = creep.memory;
-    const rMem: RoomMemory = room.memory;
-    const pos: RoomPosition = creep.pos;
-
-    if (cMem.disableAI === undefined) cMem.disableAI = false;
-    if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
-
-    if (!cMem.disableAI) {
-
-      if (cMem.rallyPoint == 'none') {
-
-        if (pos.x == 49) creep.move(LEFT);
-        else if (pos.x == 0) creep.move(RIGHT);
-        else if (pos.y == 49) creep.move(TOP);
-        else if (pos.y == 0) creep.move(BOTTOM);
-
-        if (!cMem.link) cMem.link = rMem.data.linkRegistry.central;
-        if (!cMem.storage) cMem.storage = rMem.objects.storage;
-        //if (!cMem.terminal && rMem.objects.terminal) cMem.terminal = rMem.objects.terminal[0];
-        if (!cMem.destination && rMem.data.linkRegistry.destination) cMem.destination = rMem.data.linkRegistry.destination;
-        if (!cMem.atCraneSpot === undefined) cMem.atCraneSpot = false;
-        if (cMem.upgrading == true && creep.store.getUsedCapacity() == 0) cMem.upgrading = false;
-
-        const objLink: StructureLink = Game.getObjectById(cMem.link);
-        const objStorage: StructureStorage = Game.getObjectById(cMem.storage);
-        const objTerminal: StructureTerminal = Game.getObjectById(cMem.terminal);
-        const objDestination: StructureLink = Game.getObjectById(cMem.destination);
-
-        let craneSpot = rMem.data.craneSpot;
-
-
-        if (!cMem.atCraneSpot) {
-          if (pos.x !== craneSpot[ 0 ] || pos.y !== craneSpot[ 1 ]) {
-            creep.moveTo(new RoomPosition(craneSpot[ 0 ], craneSpot[ 1 ], room.name), pathing.cranePathing);
-          } else {
-            cMem.atCraneSpot = true;
-            //log('crane at spot', room);
-          }
-        }
-
-        if (cMem.atCraneSpot == true) {
-          if (creep.store.getFreeCapacity() == 0 && cMem.dropLink == false) {
-            //log('full inventory, droplink false', room);
-            const resTypes: ResourceConstant[] = Object.keys(creep.store) as ResourceConstant[];
-            for (let types of resTypes) {
-              if (types !== RESOURCE_ENERGY)
-                creep.transfer(objStorage, types)
-            }
-          }
-
-          if (cMem.dropLink == true) {
-            //log('droplink true', room);
-            creep.transfer(objStorage, RESOURCE_ENERGY)
-            creep.say('🎇');
-            cMem.dropLink = false;
-            cMem.upgrading = false;
-            return;
-          } else if (creep.store[ RESOURCE_ENERGY ] > 0 && cMem.xferDest == true) {
-            creep.transfer(objLink, RESOURCE_ENERGY);
-            creep.say('🎆');
-            if (objLink.store[ RESOURCE_ENERGY ] > 700) {
-              cMem.xferDest = false;
-              cMem.upgrading = false;
-              objLink.transferEnergy(objDestination);
-            }
-            return;
-          } else if (creep.store.getFreeCapacity(RESOURCE_ENERGY) == 0 && cMem.upgrading == false) {
-            //log('free energy capacity is zero, upgrading is false', room);
-            creep.transfer(objStorage, RESOURCE_ENERGY);
-            creep.say('🎇');
-          } else {
-            if (objLink.store[ RESOURCE_ENERGY ] >= 30) {
-              //log('link store >= 30', room);
-              if (creep.withdraw(objLink, RESOURCE_ENERGY) == OK) {
-                creep.say('⚡');
-                cMem.dropLink = true;
-                cMem.upgrading = false;
-                return;
-              }
-            } else if ((rMem.settings.flags.craneUpgrades) && (cMem.upgrading == false)) {
-              if (creep.store.getUsedCapacity() == 0) {
-                creep.withdraw(objStorage, RESOURCE_ENERGY);
-                creep.say('⚡');
-                cMem.upgrading = true;
-              } else {
-                creep.upgradeController(room.controller)
-              }
-            } else if (objDestination && objDestination.store.getFreeCapacity(RESOURCE_ENERGY) >= objLink.store.getUsedCapacity(RESOURCE_ENERGY) && objLink.cooldown == 0) {
-              if (creep.store.getFreeCapacity() > 0) {
-                //log('crane: getting energy for C2D xfer', room);
-                creep.withdraw(objStorage, RESOURCE_ENERGY);
-                creep.say('⚡');
-                cMem.xferDest = true;
-              }
-            }
-          }
-        }
-      } else //: I HAVE A RALLY POINT, LET'S BOOGY!
-        navRallyPoint(creep);
-    } else
-      aiAlert(creep);
-  }
-}
 export const roleHarvester = {
 
-  /** @param {Creep} creep **/
   run: function (creep: Creep) {
 
-    const room: Room = creep.room;
-    const cMem: CreepMemory = creep.memory;
-    const rMem: RoomMemory = room.memory;
-    const pos: RoomPosition = creep.pos;
+    const room: Room         = creep.room;
+    const cMem: CreepMemory  = creep.memory;
+    const rMem: RoomMemory   = room.memory;
+    const pos : RoomPosition = creep.pos;
 
     if (cMem.disableAI  === undefined) cMem.disableAI  = false;
     if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
@@ -638,18 +717,25 @@ export const roleHarvester = {
           creep.unloadEnergy();
           creep.say('☠️');
         }
+
         if (creep.getActiveBodyparts(CARRY) === 0) {
           if (!cMem.source) creep.assignHarvestSource();
+
+          const source = Game.getObjectById(cMem.source);
+          if (!pos.isNearTo(source))
+            creep.moveTo(source, pathing.harvesterPathing);
           else {
-            const source = Game.getObjectById(cMem.source);
-            if (!pos.isNearTo(source)) creep.moveTo(source, pathing.harvesterPathing);
-            else {
-              const containers = pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
-              if (!pos.isEqualTo(containers[0]))
-                creep.moveTo(containers[0], pathing.harvesterPathing);
-              else
-                creep.harvestEnergy();
-            }
+            const containers = pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
+            if (containers.length) {
+              const bucket = pos.findClosestByRange(containers);
+              if (bucket) {
+                if (!pos.isEqualTo(bucket))
+                  creep.moveTo(bucket, pathing.harvesterPathing);
+                else
+                  creep.harvestEnergy();
+              }
+            } else
+              creep.harvestEnergy();
           }
         } else {
 
@@ -659,7 +745,7 @@ export const roleHarvester = {
               const containers = pos.findInRange(FIND_STRUCTURES, 3, { filter: { structureType: STRUCTURE_CONTAINER } });
               if (containers.length > 0) {
                 const target = pos.findClosestByRange(containers);
-
+                if (cMem.claimant) delete cMem.claimant;
                 if (!pos.isNearTo(target)) creep.moveTo(target, pathing.harvesterPathing);
                 else {
                   if (target.hits < target.hitsMax) creep.repair(target);
@@ -674,13 +760,17 @@ export const roleHarvester = {
                 else {
                   const buildersNearby = room.find(FIND_MY_CREEPS, { filter: (i) => i.memory.role == 'remotebuilder' || i.memory.role == 'builder' });
                   if (buildersNearby.length > 0) {
-                    creep.unloadEnergy();
-                    creep.harvestEnergy();
-                  }
-                  else {
+                    const mySite = pos.findInRange(FIND_CONSTRUCTION_SITES, 1);
+                    if (mySite.length)
+                      creep.build(mySite[0]);
+                    else {
+                      creep.unloadEnergy();
+                      creep.harvestEnergy();
+                    }
+                  } else {
                     creep.build(nearbySites[0]);
                     if (cMem.claimant)
-                      Game.rooms[cMem.homeRoom].memory.data.claimRooms[room.name as RoomName].energyRemaining -= (creep.getActiveBodyparts(WORK) * 25);
+                      Game.rooms[cMem.homeRoom].memory.data.claimRooms[room.name as RoomName].energyRemaining -= (creep.getActiveBodyparts(WORK) * 5);
                   }
                 }
                 //creep.unloadEnergy();
@@ -710,7 +800,6 @@ export const roleHarvester = {
 }
 export const roleHealer = {
 
-  /** @param {Creep} creep **/
   run: function (creep: Creep) {
 
     const room:  Room          = creep.room;
@@ -1122,7 +1211,6 @@ export const roleProvider = {
 }
 export const roleRanger = {
 
-  /** @param {Creep} creep **/
   run: function (creep: Creep) {
 
     const room:  Room          = creep.room;
@@ -1214,7 +1302,6 @@ export const roleRanger = {
 }
 export const roleRebooter = {
 
-  /** @param {Creep} creep **/
   run: function (creep: Creep) {
 
     const room: Room         = creep.room;
@@ -1260,7 +1347,6 @@ export const roleRebooter = {
 }
 export const roleRemoteBuilder = {
 
-  /** @param {Creep} creep **/
   run: function(creep: Creep) {
 
     const room:  Room          = creep.room;
@@ -1340,7 +1426,6 @@ export const roleRemoteBuilder = {
 };
 export const roleRemoteGuard = {
 
-  /** @param {Creep} creep **/
   run: function (creep: Creep) {
 
     const room:  Room          = creep.room;
@@ -1484,7 +1569,7 @@ export const roleRemoteLogistician = {
               break;
             case OK:
               cMem.initialEnergy = true;
-              rMem.data.claimRooms[cMem.destRoom].energyRemaining -= creep.store.getUsedCapacity();
+              Game.rooms[cMem.homeRoom].memory.data.claimRooms[cMem.destRoom].energyRemaining -= creep.store.getUsedCapacity();
               break;
           }
         }
@@ -1636,7 +1721,7 @@ export const roleRepairer = {
           if (cMem.currentRepairTarget) {
             const target: AnyStructure = Game.getObjectById(cMem.currentRepairTarget) as AnyStructure;
             if (target) {
-              if ((target.structureType !== STRUCTURE_RAMPART && target.structureType !== STRUCTURE_WALL) && target.hits === target.hitsMax)
+              if ((target.structureType !== STRUCTURE_RAMPART && target.structureType !== STRUCTURE_WALL) && (target.hits >= (target.hitsMax * .35)))
                 delete cMem.currentRepairTarget;
               else if (target.structureType === STRUCTURE_WALL && target.hits >= wallsMax)
                 delete cMem.currentRepairTarget;
@@ -1666,7 +1751,7 @@ export const roleRepairer = {
               //: search for basically everything that's not a wall or a rampart
               if (Memory.rooms[ cMem.homeRoom ].settings.flags.repairBasics) {
                 basics = room.find(FIND_STRUCTURES, {
-                  filter: (i) => (i.hits < i.hitsMax * .8) && (i.structureType !== STRUCTURE_WALL && i.structureType !== STRUCTURE_RAMPART)
+                  filter: (i) => (i.hits < i.hitsMax * .25) && (i.structureType !== STRUCTURE_WALL && i.structureType !== STRUCTURE_RAMPART)
                 });
                 basics = basics.sort((a, b) => a.hits - b.hits);
                 validTargets = validTargets.concat(basics);
@@ -1674,13 +1759,13 @@ export const roleRepairer = {
 
               //: add ramparts to the repair list, based on room flag & room max repair limit
               if (Memory.rooms[ cMem.homeRoom ].settings.flags.repairRamparts) {
-                ramparts = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_RAMPART) && (i.hits <= rampartsMax)) });
+                ramparts = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_RAMPART) && (i.hits <= rampartsMax)) && i.isActive});
                 ramparts = ramparts.sort((a, b) => a.hits - b.hits);
                 validTargets = validTargets.concat(ramparts);
               }
               //: add walls to the repair list, based on room flag & room max repair limit
               if (Memory.rooms[ cMem.homeRoom ].settings.flags.repairWalls) {
-                walls = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_WALL) && (i.hits <= wallsMax)) })
+                walls = room.find(FIND_STRUCTURES, { filter: (i) => ((i.structureType == STRUCTURE_WALL) && (i.hits <= wallsMax)) && i.isActive})
                 walls = walls.sort((a, b) => a.hits - b.hits);
                 validTargets = validTargets.concat(walls);
               }
@@ -1988,7 +2073,6 @@ export const roleScout = {
 };
 export const roleUpgrader = {
 
-      /** @param {Creep} creep **/
     run: function(creep: Creep) {
 
     const room:  Room          = creep.room;
@@ -2112,7 +2196,6 @@ export const roleUpgrader = {
 }
 export const roleWarrior = {
 
-  /** @param {Creep} creep **/
   run: function(creep: Creep) {
 
     const room:  Room          = creep.room;
@@ -2216,7 +2299,7 @@ export const roleWarrior = {
   }
 }
 
-export const cSet = Memory.globalSettings.creepSettings;
+const cSet = Memory.globalSettings.creepSettings;
 export const pathing: { [key: string]: MoveToOpts } = {
   builderPathing: {
     visualizePathStyle: { stroke: "#0000ff", opacity: 0.3, lineStyle: "dotted" },
@@ -2339,6 +2422,13 @@ export const pathing: { [key: string]: MoveToOpts } = {
     ignoreCreeps: Memory.globalSettings.ignoreCreeps
   }
 };
+
+/**
+ * This function allows a creep to navigate a series of Game flags, stored in Creep Memory as either a
+ * single string, or an array of strings, named rallyPoint. For no navigation, delete it/set it to 'none'.
+ * @param {Creep} creep The creep executing the waypoint navigation
+ * @returns void;
+ */
 
 function navRallyPoint(creep: Creep): void {
 
