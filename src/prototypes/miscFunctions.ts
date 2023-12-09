@@ -17,7 +17,7 @@ export function calcTickTime(tickSamples: number = 1000) { // Call this from 1st
     tickTimeTotal += millis - lastTickMillis;
     tickTimeCount++;
     let tickTime: number = (tickTimeTotal / tickTimeCount) / 1000;
-    console.log("Calculated tickTime as", tickTime, "from", tickTimeCount, "samples.");
+    log("Calculated tickTime as " + tickTime + " from " + tickTimeCount + "samples.");
     Memory.time.lastTickTime   = tickTime;
     Memory.time.tickTimeTotal  = millis - lastTickMillis;
     Memory.time.tickTimeCount  = 1;
@@ -39,8 +39,8 @@ export function randomName() {
 
   const randIndex = Math.floor(Math.random() * (nameArray.length + 1));
 
-  console.log('Random Index: ' + randIndex);
-  console.log('Random Name: ' + nameArray[randIndex]);
+  log('Random Index: ' + randIndex);
+  log('Random Name: ' + nameArray[randIndex]);
 
   return nameArray[randIndex];
 
@@ -77,7 +77,7 @@ export function partCost(array: Array<BodyPartConstant>) {
         runningTotal += 600;
         break;
       default:
-        console.log('Invalid part in array');
+        log('Invalid part in array');
         return;
     }
   }
@@ -377,13 +377,13 @@ export function createRoomFlag(room: string): string | null { // creates a flag 
   const flag = Game.rooms[room].createFlag(flagX, flagY, Game.rooms[room].name, randomColor(), randomColor());
   switch (flag) {
     default:
-      console.log(Game.rooms[room].link() + ' Flag succesfully created.');
+      log('Flag succesfully created.', Game.rooms[room]);
       return Game.rooms[room].name;
     case ERR_NAME_EXISTS:
-      console.log(Game.rooms[room].link() + ' Error: A flag with that name already exists.');
+      log('Error: A flag with that name already exists.', Game.rooms[room]);
       return null;
     case ERR_INVALID_ARGS:
-      console.log(Game.rooms[room].link() + ' Error: The location or the name is incorrect.');
+      log('Error: The location or the name is incorrect.', Game.rooms[room]);
       return null;
   }
 }
@@ -482,7 +482,7 @@ export function validateFlagName(input: string[] | string) {
       if (matched)
         continue;
       else {
-        console.log('Provided flag name of \'' + input[i] + '\' at index ' + i + ' is not an existent flag.');
+        log('Provided flag name of \'' + input[i] + '\' at index ' + i + ' is not an existent flag.');
         return false;
       }
     }
@@ -497,7 +497,7 @@ export function validateFlagName(input: string[] | string) {
     }
     if (noMatch) return false;
   } else {
-    console.log('Input parameter to validate must be an array of flag names, or a single flag name.');
+    log('Input parameter to validate must be an array of flag names, or a single flag name.');
     return null;
   }
 }
@@ -760,5 +760,25 @@ export function returnCode(rCode: ScreepsReturnCode): string {
       return 'ERR_RCL_NOT_ENOUGH';
     case -15:
       return 'ERR_GCL_NOT_ENOUGH';
+  }
+}
+
+export function log(logMsg: string | string[], room: Room | false = false): void {
+  if (logMsg instanceof Array) {
+    let finalLog: string;
+    for (let i = 0; i < logMsg.length; i++) {
+      if (room)
+        finalLog += room.link() + logMsg[i] + '\n';
+      else
+        finalLog += '[GENERAL]: ' + logMsg[i] + '\n';
+    }
+    console.log(finalLog);
+    return;
+  } else if (typeof logMsg === 'string') {
+    if (room)
+      console.log(room.link() + logMsg);
+    else
+      console.log('[GENERAL]: ' + logMsg);
+    return;
   }
 }
