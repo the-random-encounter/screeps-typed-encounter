@@ -1548,11 +1548,10 @@ export const roleRemoteLogistician = {
     const rMem:  RoomMemory    = room.memory;
     const pos :  RoomPosition  = creep.pos;
     const workRoom   = rMem.data.remoteWorkRoom;
-    const remoteLogs = Memory.rooms[cMem.homeRoom].data.remoteLogistics[workRoom];
 
     if (cMem.disableAI     === undefined) cMem.disableAI     = false;
-    if (cMem.rallyPoint    === undefined) cMem.rallyPoint    = remoteLogs.waypoints;
-    if (cMem.destPos       === undefined) cMem.destPos       = remoteLogs.logisticsTarget;
+    //if (cMem.rallyPoint    === undefined) cMem.rallyPoint    = remoteLogs.waypoints;
+    //if (cMem.destPos       === undefined) cMem.destPos       = remoteLogs.logisticsTarget;
     if (cMem.destRoom      === undefined) cMem.destRoom      = rMem.data.remoteWorkRoom;
     if (cMem.storage       === undefined) cMem.storage       = room.storage.id;
     if (cMem.initialEnergy === undefined) cMem.initialEnergy = false;
