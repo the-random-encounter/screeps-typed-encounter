@@ -1534,7 +1534,10 @@ Room.prototype.setRemoteTargets           = function(roomName: RoomName, roomXY:
     }
   }
   if (claimRoom) {
-    this.memory.data.claimRoom = roomName;
+    if (waypoints)
+      this.setClaimObjective(roomName, roomXY, 40000, 2, 2, waypoints);
+    else
+      this.setClaimObjective(roomName, roomXY, 40000, 2, 2, 'none');
   }
   this.memory.data.remoteWorkRoom = roomName;
 
@@ -1584,4 +1587,32 @@ Room.prototype.setCombatObjectives        = function(attackRoom: RoomName, waypo
     this.memory.data.combatObjectives.customAttackTargets = customTarget;
 
   return true;
+}
+
+Room.prototype.setClaimObjective          = function(claimRoom: RoomName, logSpot: number[], initialEnergy: number, neededHarvesters: number, neededBuilders: number, waypoints: string | string[] = 'none'): boolean {
+
+  const rMem = this.memory;
+  const rMemData = rMem.data;
+
+  if (rMemData.claimRooms === undefined) rMemData.claimRooms = {};
+
+  if (rMemData.claimRooms[claimRoom] === undefined) {
+    const newClaimRoom = {
+      roomName: claimRoom,
+      logSpot: {x: logSpot[0], y: logSpot[1]},
+      initialEnergy: initialEnergy,
+      energyRemaining: initialEnergy,
+      neededHarvesters: neededHarvesters,
+      neededBuilders: neededBuilders,
+      waypoints: waypoints,
+      hasBeenClaimed: false,
+      claimerSpawned: false
+    };
+    rMemData.claimRooms[claimRoom] = newClaimRoom;
+    log('New claim room objective set!', this);
+    return true;
+  } else {
+    log('ERROR: There is already a claim room objective for this room created.', this);
+    return false;
+  }
 }

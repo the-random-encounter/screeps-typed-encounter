@@ -423,10 +423,6 @@ export function randomColorAsInt() { // Random color returned as INTEGER
   return randomInt(1, 10);
 }
 
-export function spawnClaimerForCarry() {
-  return Game.spawns.Spawn1.spawnCreep([CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE], 'CarryClaimer', { memory: { role: 'claimer', roleForQuota: 'claimer', homeRoom: 'E58S51', claimRoom: 'E59S48' } });
-}
-
 export function col(colNum: number) {
   const roomName = Memory.colonies.colonyList[colNum - 1];
   return Game.rooms[roomName];
@@ -728,7 +724,7 @@ export function repairProgress(building: AnyStructure, room: Room): void {
   room.visual.text(repPercent + '%', building.pos.x, building.pos.y + 1.025, { stroke: boxColor, strokeWidth: 0.025, color: repColor, font: 0.35 });
 }
 
-export function returnCode(rCode: ScreepsReturnCode): string {
+export function returnCode(rCode: ScreepsReturnCode): ReturnCode {
   switch (rCode) {
     case 0:
       return 'OK';

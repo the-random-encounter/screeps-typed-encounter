@@ -134,7 +134,18 @@ export const roleBuilder = {
               target = cSites[0];
 
             if (target) {
-              if (creep.build(target) == ERR_NOT_IN_RANGE) creep.moveTo(target, pathing.builderPathing);
+              const result = creep.build(target);
+              switch (result) {
+                case OK:
+                  if (cMem.claimant)
+                    Game.rooms[cMem.homeRoom].memory.data.claimRooms[room.name as RoomName].energyRemaining -= (creep.getActiveBodyparts(WORK) * 25);
+                  break;
+                case ERR_NOT_IN_RANGE:
+                  creep.moveTo(target, pathing.builderPathing);
+                  break;
+                default:
+                  break;        creep.moveTo(target, pathing.builderPathing);
+              }
             } else { //: NO BUILDINGS, DO REPAIRS IF NO REPAIRERS
               const repairers = room.find(FIND_MY_CREEPS, { filter: (i) => i.memory.role === 'repairer' });
 
@@ -190,34 +201,47 @@ export const roleClaimer = {
     const rMem:  RoomMemory    = room.memory;
     const pos :  RoomPosition  = creep.pos;
 
-
+    let claimObjective;
     if (cMem.disableAI  === undefined) cMem.disableAI  = false;
     if (cMem.rallyPoint === undefined) cMem.rallyPoint = 'none';
     if (cMem.claimRoom  === undefined) {
-      if (rMem.data.claimRoom)
-        cMem.claimRoom = rMem.data.claimRoom;
+      if (rMem.data.claimRooms) {
+        const rooms = Object.keys(rMem.data.claimRooms) as RoomName[];
+        for (let i = 0; i < rooms.length; i++) {
+          if (rMem.data.claimRooms[rooms[i]].hasBeenClaimed === false) {
+            cMem.claimRoom = rooms[i];
+            claimObjective = rMem.data.claimRooms[rooms[i]];
+            break;
+          } else
+            continue;
+        }
+      }
     }
-    const workRoom = rMem.data.remoteWorkRoom;
 
-
-    if (cMem.workRoom === undefined) cMem.workRoom = workRoom;
-
-    const remoteLogs = Memory.rooms[cMem.homeRoom].data.remoteLogistics[cMem.workRoom];
-
-    //const waypoints = remoteLogs.waypoints;
     if (cMem.remoteWaypoints === undefined) {
-      if (remoteLogs.waypoints.length > 0)
-        cMem.remoteWaypoints = remoteLogs.waypoints;
-      else cMem.remoteWaypoints = 'none';
+      if (rMem.data.claimRooms)
+        cMem.remoteWaypoints = rMem.data.claimRooms[cMem.claimRoom].waypoints;
+      else
+        cMem.remoteWaypoints = 'none';
     }
 
     if (!cMem.disableAI) {
 
       if (cMem.rallyPoint == 'none') {
 
-        if (creep.getActiveBodyparts(CARRY) > 0) {
+        if (creep.getActiveBodyparts(CARRY) > 0 && creep.store.getUsedCapacity() == 0) {
           const storage = Game.rooms[cMem.homeRoom].storage;
-          if (creep.withdraw(storage, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) creep.moveTo(storage);
+          const result = creep.withdraw(storage, RESOURCE_ENERGY);
+          switch (result) {
+            case OK:
+              //rMem.data.claimRooms[claimRoom].energyRemaining -= (creep.store.getUsedCapacity());
+              break;
+            case ERR_NOT_IN_RANGE:
+              creep.moveTo(storage);
+              break;
+            default:
+              break;
+          }
         } else {
 
           if (cMem.remoteWaypoints !== 'none') {
@@ -243,13 +267,30 @@ export const roleClaimer = {
 
             const claimRoom = cMem.claimRoom;
 
-            if (room.name !== claimRoom) {
-                if (!pos.isNearTo(Game.flags[claimRoom])) creep.moveTo(Game.flags[claimRoom], pathing.claimerPathing);
-            } else {
-              if (creep.claimController(room.controller) == ERR_NOT_IN_RANGE)
-                creep.moveTo(room.controller, pathing.claimerPathing);
+            if (room.name !== claimRoom)
+              creep.moveTo(Game.flags[claimRoom], pathing.claimerPathing);
+            else {
+              const result = creep.claimController(room.controller);
+              switch (result) {
+                case OK:
+                  rMem.data.claimRooms[claimRoom.name].hasBeenClaimed = true;
+                  cMem.haveClaimed = true;
+                  break;
+                case ERR_NOT_IN_RANGE:
+                  creep.moveTo(room.controller, pathing.claimerPathing);
+                  break;
+              }
+
               if (!room.controller.sign || room.controller.sign.username !== 'randomencounter')
-                creep.signController(room.controller, 'There\'s no place like 127.0.0.1');
+                creep.signController(room.controller, 'There\'s no place like 127.0.0.1!');
+              else if (cMem.haveClaimed) {
+                const logSpot = new RoomPosition(claimObjective.logSpot.x, claimObjective.logSpot.y, claimRoom);
+
+                if (!pos.isEqualTo(logSpot))
+                  creep.moveTo(logSpot, pathing.claimerPathing);
+                else
+                  creep.drop(RESOURCE_ENERGY);
+              }
             }
           }
         }
@@ -636,7 +677,11 @@ export const roleHarvester = {
                     creep.unloadEnergy();
                     creep.harvestEnergy();
                   }
-                  else creep.build(nearbySites[0]);
+                  else {
+                    creep.build(nearbySites[0]);
+                    if (cMem.claimant)
+                      Game.rooms[cMem.homeRoom].memory.data.claimRooms[room.name as RoomName].energyRemaining -= (creep.getActiveBodyparts(WORK) * 25);
+                  }
                 }
                 //creep.unloadEnergy();
                 //creep.harvestEnergy();
@@ -1024,7 +1069,7 @@ export const roleProvider = {
 
     if (cMem.disableAI  === undefined)  cMem.disableAI  = false;
     if (cMem.rallyPoint  === undefined)  cMem.rallyPoint  = 'none';
-    if (cMem.targetRoom  === undefined)  cMem.targetRoom  = rMem.data.claimRoom;
+    //if (cMem.targetRoom  === undefined)  cMem.targetRoom  = rMem.data.claimRooms[]
     if (cMem.travelling  === undefined)  cMem.travelling  = false;
 
     if (!cMem.disableAI) {
@@ -1439,6 +1484,7 @@ export const roleRemoteLogistician = {
               break;
             case OK:
               cMem.initialEnergy = true;
+              rMem.data.claimRooms[cMem.destRoom].energyRemaining -= creep.store.getUsedCapacity();
               break;
           }
         }
@@ -1505,7 +1551,7 @@ export const roleRemoteLogistician = {
               }
             } else //* If the creep is not at the target position, move towards it
               creep.moveTo(targetPosition, pathing.remoteLogisticianPathing);
-          } //: end of primary logic
+          } //! end of primary logic
         } else //: I HAVE A RALLY POINT, LET'S BOOGY!
         navRallyPoint(creep);
       }

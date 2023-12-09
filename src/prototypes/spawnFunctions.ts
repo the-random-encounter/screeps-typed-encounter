@@ -1,14 +1,7 @@
 import { max } from "lodash";
 import { returnCode, validateRoomName, validateFlagName, log } from "./miscFunctions";
 
-Spawn.prototype.spawnDismantler = function (maxEnergy: number | false = false) {
-
-	Game.spawns.Spawn1.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK, WORK], 'RAWRR', { memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: 'W13N34', rallyPoint: 'W13N33', customAttackTarget: '6050a493210d07b5d7fd9247' } })
-
-	Game.spawns.Spawn1.spawnCreep([MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, WORK, WORK, WORK, WORK, WORK, WORK], 'RBguy', {memory: {role: 'remotebuilder', roleForQuota: 'remotebuilder', homeRoom: 'W13N34', rallyPoint: 'W13N33', workRoom: 'W13N33'}})
-}
-
-Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ScreepsReturnCode {
+Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ReturnCode {
 
 
   let x = 1;
@@ -17,16 +10,17 @@ Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName,
     case ERR_NAME_EXISTS:
       log(this.name + ': ' + returnCode(result), this.room);
       this.spawnHealer(creepName + x, targetRoom, waypoints, maxEnergy);
-      return ERR_NAME_EXISTS;
+      break;
     case OK:
       log(this.name + ': ' + returnCode(result), this.room);
-      return OK;
+      break;
     default:
       log(this.name + ': ' + returnCode(result), this.room);
-      return result;
+      break;
   }
+  return returnCode(result);
 }
-Spawn.prototype.spawnBeef = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ScreepsReturnCode {
+Spawn.prototype.spawnBeef = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ReturnCode {
 
   let x = 1;
   const result: ScreepsReturnCode = this.spawnCreep([ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE ], creepName, { memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } })
@@ -34,51 +28,157 @@ Spawn.prototype.spawnBeef = function (creepName: string, targetRoom: RoomName, w
     case ERR_NAME_EXISTS:
       log(this.name + ': ' + returnCode(result), this.room);
       this.spawnBeef(creepName + x, targetRoom, waypoints, maxEnergy);
-      return ERR_NAME_EXISTS;
+      break;
     case OK:
       log(this.name + ': ' + returnCode(result), this.room);
-      return OK;
+      break;
     default:
       log(this.name + ': ' + returnCode(result), this.room);
-      return result;
+      break;
   }
+  return returnCode(result);
 }
 
 
-Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ScreepsReturnCode {
+Spawn.prototype.spawnHealer = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ReturnCode {
 
 	const baseBody = [TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,HEAL,HEAL,HEAL,HEAL,HEAL,HEAL];
 
 	const result = this.spawnCreep(baseBody, creepName, { memory: { role: 'healer', roleForQuota: 'healer', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } });
 	 log('Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
-   return result;
+   return returnCode(result);
 
 }
 
-Spawn.prototype.spawnWarrior = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ScreepsReturnCode {
+Spawn.prototype.spawnWarrior = function (creepName: string, targetRoom: RoomName, waypoints: string | string[] | 'none' = 'none', maxEnergy: number | false = false): ReturnCode {
 
 
 	const baseBody = [TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK,ATTACK];
 
 	const result = this.spawnCreep(baseBody, creepName, { memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: this.room.name, attackRoom: targetRoom, rallyPoint: waypoints } });
-	log('Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
-  return result;
-}
 
-Spawn.prototype.spawnHarvester = function (targetRoom: RoomName, name: string) {
-	const result = this.spawnCreep([CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK], name, { memory: { role: 'harvester', roleForQuota: 'harvester', homeRoom: targetRoom, rallyPoint: targetRoom } });
-	log('Spawning harvester (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
-  return result;
+  log('Spawning warrior (target: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+
+  return returnCode(result);
 }
-Spawn.prototype.spawnClaimer = function (claimRoom: RoomName) {
+Spawn.prototype.spawnNewClaimBuilder = function (targetRoom: RoomName, name: string = 'NewClaimBuilder', maxEnergy?: number): ReturnCode {
+
+  if (!maxEnergy)
+    maxEnergy = this.room.energyCapacityAvailable;
+
+  const claimObjective = this.room.memory.data.claimRooms[targetRoom];
+
+	const result = this.spawnCreep([MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY], name, { memory: { role: 'builder', roleForQuota: 'unallocated', homeRoom: this.room.name, rallyPoint: claimObjective.waypoints, claimant: true } });
+
+  log('Spawning new claim harvester (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+
+  switch (result) {
+    case OK:
+      this.room.memory.data.claimRooms[targetRoom].neededBuilders -= 1;
+      break;
+    case ERR_NAME_EXISTS:
+      this.spawnNewClaimBuilder(targetRoom, name + '1', maxEnergy);
+      break;
+    case ERR_NOT_ENOUGH_RESOURCES:
+      this.spawnNewClaimBuilder(targetRoom, name + '1', maxEnergy);
+      break;
+    default:
+      break;
+  }
+
+  return returnCode(result);
+}
+Spawn.prototype.spawnNewClaimHarvester = function (targetRoom: RoomName, name: string = 'NewClaimHarvester', maxEnergy?: number): ReturnCode {
+
+  if (!maxEnergy)
+    maxEnergy = this.room.energyCapacityAvailable;
+
+  const claimObjective = this.room.memory.data.claimRooms[targetRoom];
+
+	const result = this.spawnCreep([CARRY, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK], name, { memory: { role: 'harvester', roleForQuota: 'unallocated', homeRoom: this.room.name, rallyPoint: claimObjective.waypoints, claimant: true } });
+
+  log('Spawning new claim harvester (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+
+  switch (result) {
+    case OK:
+      this.room.memory.data.claimRooms[targetRoom].neededHarvesters -= 1;
+      break;
+    case ERR_NAME_EXISTS:
+      this.spawnNewClaimHarvester(targetRoom, name + '1', maxEnergy);
+      break;
+    case ERR_NOT_ENOUGH_RESOURCES:
+      this.spawnNewClaimHarvester(targetRoom, name + '1', maxEnergy);
+      break;
+    default:
+      break;
+  }
+
+  return returnCode(result);
+}
+Spawn.prototype.spawnNewClaimHauler = function (targetRoom: RoomName, name: string = 'NewClaimHauler', maxEnergy?: number): ReturnCode {
+
+  if (!maxEnergy)
+    maxEnergy = this.room.energyCapacityAvailable;
+
+  const claimObjective = this.room.memory.data.claimRooms[targetRoom];
+
+  const baseBody = this.determineBodyparts('remotelogistician');
+
+  const result = this.spawnCreep(baseBody, name, { memory: { role: 'remotelogistician', roleForQuota: 'unallocated', homeRoom: targetRoom, rallyPoint: claimObjective.waypoints, destRoom: targetRoom, destPos: [claimObjective.logSpot.x, claimObjective.logSpot.y] } });
+
+  log('Spawning new claim hauler (home: ' + targetRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+
+  switch (result) {
+    case OK:
+      break;
+    case ERR_NAME_EXISTS:
+      this.spawnNewClaimHauler(targetRoom, name + '1', maxEnergy);
+      break;
+    case ERR_NOT_ENOUGH_RESOURCES:
+      this.spawnNewClaimHauler(targetRoom, name + '1', maxEnergy);
+      break;
+    default:
+      break;
+  }
+
+  return returnCode(result);
+}
+Spawn.prototype.spawnClaimer = function (claimRoom: RoomName, name: string = 'Claimer', canHaul: boolean = false, maxEnergy?: number): ReturnCode {
+
+  if (!maxEnergy)
+    maxEnergy = this.room.energyCapacityAvailable;
 
 	const homeRoom = this.room.name;
+  const claimObjective = this.room.memory.data.claimRooms[claimRoom];
+  let baseBody: BodyPartConstant[] = [];
+  if (canHaul)
+    baseBody = [MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CLAIM];
+  else
+    baseBody = [MOVE,CLAIM];
 
-	this.spawnCreep([MOVE, CLAIM], 'Claimer', { memory: { role: 'claimer', roleForQuota: 'claimer', homeRoom: homeRoom, claimRoom: claimRoom } });
+	const result = this.spawnCreep(baseBody, name, { memory: { role: 'claimer', roleForQuota: 'claimer', homeRoom: homeRoom, claimRoom: claimRoom, remoteWaypoints: claimObjective.waypoints } });
 
-	return '[' + this.room.name + ']: Spawning claimer (home: ' + homeRoom + ') (claim: ' + claimRoom + ')';
+	log('Spawning claimer (home: ' + homeRoom + ') (claim: ' + claimRoom + ')... RESULT CODE: ' + returnCode(result), this.room);
+  switch (result) {
+    case OK:
+      break;
+    case ERR_NAME_EXISTS:
+      this.spawnClaimer(claimRoom, name + '1', canHaul, maxEnergy);
+      break;
+    case ERR_NOT_ENOUGH_RESOURCES:
+      this.spawnClaimer(claimRoom, name + '1', canHaul, maxEnergy);
+      break;
+    default:
+      break;
+  }
+
+  return returnCode(result);
 }
-Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy: number) {
+
+Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy?: number ) {
+
+  if (!maxEnergy)
+    maxEnergy = this.room.energyCapacityAvailable;
 
 	switch (creepRole) {
 		case 'reserver':
@@ -96,9 +196,21 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy:
 		case 'builder':
 
 			break;
-		case 'collector':
+		case 'collector': {
+      const maxCarryCost  : number = Math.round((maxEnergy    / 3) * 2   / 50) * 50;
+      const maxMoveCost   : number = Math.ceil (maxEnergy     / 3  / 50) * 50;
+      let   maxCarryParts : number = Math.floor(maxCarryCost  / 50);
+      let   maxMoveParts  : number = Math.floor(maxMoveCost   / 50);
+      let   carryArray    : BodyPartConstant[] = [];
+      let   moveArray     : BodyPartConstant[] = [];
 
+      for (let i = 0; i < maxCarryParts; i++) carryArray.push(CARRY);
+      for (let i = 0; i < maxMoveParts ; i++) moveArray .push(MOVE );
+
+      const bodyArray: BodyPartConstant[] = moveArray.concat(carryArray);
+      return bodyArray;
 			break;
+    }
 		case 'repairer':
 
 			break;
@@ -108,102 +220,101 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy:
 		case 'warrior':
 
 			break;
-    case 'runner':
-      try {
-        const maxCarryCost: number = Math.round((maxEnergy / 3) * 2 / 50) * 50;
-        const maxMoveCost: number = Math.ceil(maxEnergy / 3 / 50) * 50;
-        let maxCarryParts: number = Math.floor(maxCarryCost / 50);
-        let maxMoveParts: number = Math.floor(maxMoveCost / 50);
+    case 'runner': {
+      const maxCarryCost: number = Math.round((maxEnergy    / 3) * 2   / 50) * 50;
+      const maxMoveCost : number = Math.ceil (maxEnergy     / 3  / 50) * 50;
+      let maxCarryParts : number = Math.floor(maxCarryCost  / 50);
+      let maxMoveParts  : number = Math.floor(maxMoveCost   / 50);
 
-        const locality  : string = this.room.memory.data.logisticalPairs[ this.room.memory.data.pairCounter ].locality;
-        const pathLen   : number = this.room.memory.data.logisticalPairs[ this.room.memory.data.pairCounter ].distance;
-        const carryParts: number = Math.ceil(pathLen / 5) * 2;
-        const moveParts : number = Math.ceil(carryParts / 2);
-        let   carryArray: BodyPartConstant[] = [];
-        let   moveArray : BodyPartConstant[] = [];
-        if (locality == 'remote') {
-          maxCarryParts = maxCarryParts;
-          maxMoveParts  = maxMoveParts;
-        }
+      const locality    : string = this.room.memory.data.logisticalPairs[ this.room.memory.data.pairCounter ].locality;
+      const pathLen     : number = this.room.memory.data.logisticalPairs[ this.room.memory.data.pairCounter ].distance;
+      const carryParts  : number = Math.ceil(pathLen    / 5) * 2;
+      const moveParts   : number = Math.ceil(carryParts / 2);
+      let   carryArray  : BodyPartConstant[] = [];
+      let   moveArray   : BodyPartConstant[] = [];
 
-        if (maxCarryParts > carryParts) maxCarryParts = carryParts;
-        if (maxMoveParts  > moveParts ) maxMoveParts  = moveParts;
-        log('pathLength: ' + pathLen, this.room);
+      if (maxCarryParts > carryParts) maxCarryParts = carryParts;
+      if (maxMoveParts  > moveParts ) maxMoveParts  = moveParts;
 
-        for (let i = 0; i < maxCarryParts; i++) carryArray.push(CARRY);
+      for (let i = 0; i < maxCarryParts; i++) carryArray.push(CARRY);
+      for (let i = 0; i < maxMoveParts ; i++) moveArray .push(MOVE );
 
+      let currCarryCost : number  = carryArray.length * 50;
+      let currMoveCost  : number  = moveArray .length * 50;
+      let partCost      : number  = currCarryCost + currMoveCost;
 
-        for (let i = 0; i < maxMoveParts; i++)  moveArray.push(MOVE);
+      if (maxEnergy - partCost >= 50) carryArray.push(CARRY);
+      if (maxEnergy - partCost >= 100 && carryArray.length % 2 == 1) moveArray.push(MOVE);
 
-        let currCarryCost : number  = carryArray.length * 50;
-        let currMoveCost  : number  = moveArray .length * 50;
-        let partCost      : number  = currCarryCost + currMoveCost;
+      currCarryCost = carryArray.length * 50;
+      currMoveCost  = moveArray .length * 50;
+      partCost      = currCarryCost + currMoveCost;
 
-        if (maxEnergy - partCost >= 50) carryArray.push(CARRY);
-        if (maxEnergy - partCost >= 100 && carryArray.length % 2 == 1) moveArray.push(MOVE);
+      let bodyArray : BodyPartConstant[] = carryArray.concat(moveArray);
+      let finalCost : number             = bodyArray.length * 50;
 
-        currCarryCost = carryArray.length * 50;
-        currMoveCost  = moveArray .length * 50;
-        partCost      = currCarryCost + currMoveCost;
-
-        let bodyArray : BodyPartConstant[] = carryArray.concat(moveArray);
-        let finalCost: number = bodyArray.length * 50;
-
-        if (locality == 'remote') {
-          let isEven = carryArray.length % 2;
-          if (isEven) {
-            if (maxEnergy - partCost >= 150) {
-              bodyArray.push(WORK);
-              bodyArray.push(MOVE);
-              finalCost += 150
-            } else if (maxEnergy - partCost >= 50) {
-              bodyArray.shift();
-              bodyArray.push(WORK);
-              finalCost += 50
-            } else {
-              bodyArray.pop();
-              bodyArray.shift();
-              bodyArray.push(WORK);
-            }
+      if (locality == 'remote') {
+        let isEven = carryArray.length % 2;
+        if (isEven) {
+          if (maxEnergy - partCost >= 150) {
+            bodyArray.push(WORK);
+            bodyArray.push(MOVE);
+            finalCost += 150
+          } else if (maxEnergy - partCost >= 50) {
+            bodyArray.shift();
+            bodyArray.push(WORK);
+            finalCost += 50
           } else {
-            if (maxEnergy - partCost >= 100) {
-              bodyArray.push(WORK);
-              finalCost += 100;
-            }
-            else if (maxEnergy - partCost >= 50) {
-              bodyArray.shift();
-              bodyArray.push(WORK);
-              finalCost += 50;
-            }
+            bodyArray.pop();
+            bodyArray.shift();
+            bodyArray.push(WORK);
+          }
+        } else {
+          if (maxEnergy - partCost >= 100) {
+            bodyArray.push(WORK);
+            finalCost += 100;
+          }
+          else if (maxEnergy - partCost >= 50) {
+            bodyArray.shift();
+            bodyArray.push(WORK);
+            finalCost += 50;
           }
         }
-        let finalCarry: number, finalMove: number, finalWork: number;
-
-        _.forEach(bodyArray, (part: BodyPartConstant) => {
-          if (part === CARRY) finalCarry++;
-          else if (part === MOVE) finalMove++;
-          else if (part === WORK) finalWork++;
-        });
-
-        log(bodyArray, this.room);
-        log('carryParts: ' + finalCarry + ' maxCarryParts: ' + maxCarryParts + ' | moveParts: ' + finalMove + ' maxMoveParts: ' + maxMoveParts, this.room);
-        if (finalWork)
-          log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + 'workParts: ' + finalWork + ' workCost: ' + finalWork * 100 + ' finalCost: ' + finalCost, this.room);
-        else
-          log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + ' finalCost: ' + finalCost, this.room);
-
-        return bodyArray;
-      } catch (e: any) {
-        log(e, this.room);
-        log(e.stack, this.room);
       }
-      break;
+      let finalCarry: number, finalMove: number, finalWork: number;
+
+      _.forEach(bodyArray, (part: BodyPartConstant) => {
+        if      (part === CARRY)  finalCarry++;
+        else if (part === MOVE)   finalMove++;
+        else if (part === WORK)   finalWork++;
+      });
+
+      log('pathLength: ' + pathLen + ' | ' + bodyArray.toString(), this.room);
+      log('carryParts: ' + finalCarry + ' maxCarryParts: ' + maxCarryParts + ' | moveParts: ' + finalMove + ' maxMoveParts: ' + maxMoveParts, this.room);
+      if (finalWork)
+        log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + 'workParts: ' + finalWork + ' workCost: ' + finalWork * 100 + ' finalCost: ' + finalCost, this.room);
+      else
+        log('carryCost: ' + finalCarry * 50 + ' maxCarryCost: ' + maxCarryCost + ' | moveCost: ' + finalMove * 50 + ' maxMoveCost: ' + maxMoveCost + ' finalCost: ' + finalCost, this.room);
+
+      return bodyArray;
+    }
 		case 'healer':
 
 			break;
-		case 'remotelogistician':
+		case 'remotelogistician': {
+      const maxCarryCost  : number = Math.round((maxEnergy    / 3) * 2   / 50) * 50;
+      const maxMoveCost   : number = Math.ceil (maxEnergy     / 3  / 50) * 50;
+      let   maxCarryParts : number = Math.floor(maxCarryCost  / 50);
+      let   maxMoveParts  : number = Math.floor(maxMoveCost   / 50);
+      let   carryArray    : BodyPartConstant[] = [];
+      let   moveArray     : BodyPartConstant[] = [];
 
-			break;
+      for (let i = 0; i < maxCarryParts; i++) carryArray.push(CARRY);
+      for (let i = 0; i < maxMoveParts ; i++) moveArray .push(MOVE );
+
+      const bodyArray: BodyPartConstant[] = moveArray.concat(carryArray);
+      return bodyArray;
+    }
 		case 'remoteharvester':
 
 			break;
