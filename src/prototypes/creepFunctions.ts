@@ -35,37 +35,38 @@ Creep.prototype.assignHarvestSource = function(noIncrement?: boolean): Source {
 	const cMem: CreepMemory = this.memory;
 	const rMem: RoomMemory = room.memory;
 	const role: CreepRoles = cMem.role;
+  const home = Game.rooms[cMem.homeRoom].memory;
 
 	// Confirm the room has had its sources cached
 	if (rMem.objects === undefined)	room.cacheObjects();
 
 	// get array of sources available
 	let roomSources: Id<Source>[] = [];
-	if (role == 'harvester') roomSources = rMem.objects.sources;
-	else if (role == 'remoteharvester') roomSources = rMem.outposts.aggregateSourceList;
+	if (role == 'harvester') roomSources = home.objects.sources;
+	else if (role == 'remoteharvester') roomSources = home.outposts.aggregateSourceList;
 
 	// in case there is no lastAssigned counter, create it
 	if (role == 'harvester') {
-		if (rMem.objects.lastAssigned === undefined) {
-			rMem.objects.lastAssigned = 0;
+		if (home.objects.lastAssigned === undefined) {
+			home.objects.lastAssigned = 0;
 			console.log(room.link() + 'Creating \'lastAssigned\' memory object.')
 		}
 	} else if (role == 'remoteharvester') {
-		if (rMem.outposts.aggLastAssigned === undefined) {
-			rMem.outposts.aggLastAssigned = 0;
+		if (home.outposts.aggLastAssigned === undefined) {
+			home.outposts.aggLastAssigned = 0;
 			console.log(room.link() + 'Creating \'aggLastAssigned\' memory object.');
 		}
 	}
 
 	// separate last assigned value for contingency condition
 	let LA: number;
-	if (role == 'harvester') LA = rMem.objects.lastAssigned;
-	else if (role == 'remoteharvester') LA = rMem.outposts.aggLastAssigned;
+	if (role == 'harvester') LA = home.objects.lastAssigned;
+	else if (role == 'remoteharvester') LA = home.outposts.aggLastAssigned;
 
 	// set nextAssigned to the increment of lastAssigned
 	let nextAssigned: number;
-	if (role == 'harvester') nextAssigned = rMem.objects.lastAssigned + 1;
-	else if (role == 'remoteharvester') nextAssigned = rMem.outposts.aggLastAssigned + 1;
+	if (role == 'harvester') nextAssigned = home.objects.lastAssigned + 1;
+	else if (role == 'remoteharvester') nextAssigned = home.outposts.aggLastAssigned + 1;
 
 	// set nextAssigned to 0 if it has reached the end of sources list
 	if (nextAssigned >= roomSources.length)
@@ -77,22 +78,22 @@ Creep.prototype.assignHarvestSource = function(noIncrement?: boolean): Source {
 	// set creep memory to match
 	cMem.source = assignedSource.id;
 
-	if (role == 'harvester') rMem.objects.lastAssigned++;
-	else if (role == 'remoteharvester') rMem.outposts.aggLastAssigned++;
+	if (role == 'harvester') home.objects.lastAssigned++;
+	else if (role == 'remoteharvester') home.outposts.aggLastAssigned++;
 
 	if (role == 'harvester') {
-		if (rMem.objects.lastAssigned >= roomSources.length)
-			rMem.objects.lastAssigned = 0;
+		if (home.objects.lastAssigned >= roomSources.length)
+			home.objects.lastAssigned = 0;
 	} else if (role == 'remoteharvester') {
-		if (rMem.outposts.aggLastAssigned >= roomSources.length)
-			rMem.outposts.aggLastAssigned = 0;
+		if (home.outposts.aggLastAssigned >= roomSources.length)
+			home.outposts.aggLastAssigned = 0;
 	}
 
 	console.log(room.link() + 'Assigned harvester ' + this.name + ' to source #' + (LA + 1) + ' (ID: ' + assignedSource + ') in room ' + assignedSource.room.name);
 
 	if (noIncrement) {
-		if (role == 'harvester') rMem.objects.lastAssigned = LA;
-		else if (role == 'remoteharvester') rMem.outposts.aggLastAssigned = LA;
+		if (role == 'harvester') home.objects.lastAssigned = LA;
+		else if (role == 'remoteharvester') home.outposts.aggLastAssigned = LA;
 	}
 
 	return assignedSource;
@@ -143,11 +144,6 @@ Creep.prototype.unloadEnergy = function(): void {
 		const sourceContainers: Array<StructureLink | StructureStorage | StructureContainer> = sourceTarget.pos.findInRange(FIND_STRUCTURES, 3, { filter: (obj) => (obj.structureType == STRUCTURE_LINK || obj.structureType == STRUCTURE_STORAGE || obj.structureType == STRUCTURE_CONTAINER)/* && obj.pos.isNearTo(this)*/ });
 		const nearbyObj: StructureLink | StructureContainer | StructureStorage = sourceContainers[0];
 
-		//if (nearbyObj && nearbyObj.structureType == STRUCTURE_CONTAINER) {
-		//	if (!this.room.checkOutbox(nearbyObj.id))
-		//		this.room.setOutbox(nearbyObj.id);
-		//}
-
 		if (!nearbyObj) {
 			if (this.drop(RESOURCE_ENERGY) === OK) {
 				this.say('🗑️');
@@ -155,7 +151,6 @@ Creep.prototype.unloadEnergy = function(): void {
 			}
 			return;
 		} else {
-			//const target = nearbyObj[0];
 			this.memory.bucket = nearbyObj.id;
 			if (nearbyObj.hits == nearbyObj.hitsMax) {
 				if (this.pos.isNearTo(nearbyObj)) {
@@ -185,7 +180,12 @@ Creep.prototype.harvestEnergy = function(): void {
 					this.harvest(storedSource);
 				} else this.say('🚬');
 			} else this.harvest(storedSource);
-		} else this.moveTo(storedSource, pathing.harvesterPathing);
+		} else {
+      if (this.room.name === storedSource.room.name)
+        this.moveTo(storedSource, pathing.harvesterPathing);
+      else
+        this.moveTo(Game.flags[storedSource.room.name]);
+    }
 	}
 }
 
