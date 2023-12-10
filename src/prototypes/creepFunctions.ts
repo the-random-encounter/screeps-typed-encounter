@@ -73,10 +73,23 @@ Creep.prototype.assignHarvestSource = function(noIncrement?: boolean): Source {
 		nextAssigned = 0;
 
 	// set assigned source to the next assigned room source
-	const assignedSource: Source = Game.getObjectById(roomSources[nextAssigned]);
+	let assignedSource: Source = Game.getObjectById(roomSources[nextAssigned]);
 
 	// set creep memory to match
-	cMem.source = assignedSource.id;
+  if (assignedSource)
+	  cMem.source = assignedSource.id;
+  else {
+    if (role == 'harvester') {
+      const sources = Game.rooms[cMem.homeRoom].memory.objects.sources;
+      cMem.source = sources[nextAssigned];
+    }
+    else if (role == 'remoteharvester') {
+      const sources = Game.rooms[cMem.homeRoom].memory.outposts.aggregateSourceList;
+      cMem.source = sources[nextAssigned];
+    }
+    assignedSource = Game.getObjectById(cMem.source);
+  }
+
 
 	if (role == 'harvester') home.objects.lastAssigned++;
 	else if (role == 'remoteharvester') home.outposts.aggLastAssigned++;
