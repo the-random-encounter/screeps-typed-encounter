@@ -1,11 +1,14 @@
 // PURPOSE import creep role modules
-import { roleHarvester, roleUpgrader, roleBuilder, roleFiller, roleRepairer, roleRunner, roleCrane, roleMiner, roleScientist, roleRanger, roleWarrior, roleHealer, roleProvider, roleRebooter, roleRemoteLogistician, roleRemoteHarvester, roleRemoteBuilder, roleRemoteGuard, roleReserver, roleClaimer, roleScout, roleInvader, roleCollector } from "roles/roles";
+import { roleHarvester, roleUpgrader, roleBuilder, roleFiller, roleRepairer, roleRunner, roleCrane, roleMiner, roleScientist, roleRanger, roleWarrior, roleHealer, roleProvider, roleRebooter, roleRemoteLogistician, roleRemoteHarvester, roleRemoteBuilder, roleRemoteGuard, roleReserver, roleClaimer, roleScout, roleInvader, roleCollector, roleUpgraderOnly, roleLarva} from "roles/roles";
 
 // PURPOSE import other modules
 import { roomDefense } from "./roomDefense";
-import { calcTickTime, visualRCProgress, buildProgress, log } from 'prototypes/miscFunctions';
+import { calcTickTime, visualRCProgress, buildProgress, log, returnCode, roomExitsTo, validateRoomName, randomInt, initGlobal, determineVariants } from 'prototypes/miscFunctions';
 import { ErrorMapper } from "utils/ErrorMapper";
 import { MemHack } from "utils/MemHack";
+import { creepCleanup } from "room/cleanup";
+import { RoomOfferTask, RoomPickupTask, RoomPullTask, RoomTask, RoomTransferTask, RoomWithdrawTask } from "room/roomTasks"
+import { spawnVariants, constants, spawnPriorityList } from 'utils/constants';
 
 // PURPOSE import prototype modules
 import 'prototypes/creepFunctions';
@@ -17,6 +20,46 @@ import 'prototypes/spawnFunctions';
 declare global {
 
   // PURPOSE begin with TYPE definitions
+
+	interface Colors {
+		white: string
+		lightGrey: string
+		lightBlue: string
+		darkBlue: string
+		black: string
+		yellow: string
+		red: string
+		green: string
+		brown: string
+	}
+
+	type StampTypes =
+	'fastFiller' 			|
+	'hub'						  |
+	'extensions' 			|
+	'labs' 						|
+	'tower' 					|
+	'extension' 			|
+	'observer' 				|
+	'sourceLink' 			|
+	'sourceExtension' |
+	'rampart' 				|
+	'boardingRampart'
+
+	interface Stamp {
+		offset: number
+		/**
+		 * The range of protection from the anchor to provide when deciding rampart placement
+		 */
+		protectionOffset: number
+		size: number
+		structures: {[structureType: string]: Pos[]}
+	}
+
+	type StampAnchors = Partial<Record<StampTypes, RoomPosition[]>>;
+
+	type PackedPosMap = any[];
+
   type alignment = 'left' | 'right' | 'center';
 
   type OrderedStructurePlans = BuildObj[];
@@ -28,6 +71,8 @@ declare global {
     'collector'         |
     'crane'             |
     'harvester'         |
+		'harvester1'				|
+		'harvester2'				|
     'healer'            |
     'invader'           |
     'miner'             |
@@ -37,6 +82,8 @@ declare global {
     'remotebuilder'     |
     'remoteguard'       |
     'remoteharvester'   |
+		'remoteharvester1'  |
+		'remoteharvester2'  |
     'remotelogistician' |
     'remoterunner'      |
     'repairer'          |
@@ -46,6 +93,8 @@ declare global {
     'scout'             |
     'upgrader'          |
     'warrior'           |
+		'upgraderonly'			|
+    'larva'             |
     'unallocated'
 
 
@@ -53,7 +102,7 @@ declare global {
     'terrainCM'         |
     'baseCM'            |
     'roadCM'            |
-    'strucutrePlans'    |
+    'structurePlans'    |
     'mineral'           |
     'source1'           |
     'source2'           |
@@ -67,7 +116,7 @@ declare global {
     'mineralHarvestPositions'     |
     'closestMineralHarvestPos'    |
     'source1HarvestPositions'     |
-    'source1closestHarvestPos'    |
+    'source1ClosestHarvestPos'    |
     'source2HarvestPositions'     |
     'source2ClosestHarvestPos'    |
     'centerUpgraderPos'           |
@@ -85,7 +134,7 @@ declare global {
     'fastFillerLink'              |
     'hubLink'                     |
     'controllerLink'              |
-    'usedMienralHarvestPositions' |
+    'usedMineralHarvestPositions' |
     'usedSourceHarvestPositions'  |
     'usedUpgradePositions'        |
     'usedFastFillerPositions'     |
@@ -119,7 +168,7 @@ declare global {
     'craneUpgrades'         |
     'harvestersFixAdjacent' |
     'runnersDoMinerals'     |
-    'runnersDoPiles'        |
+    'runnersPickupEnergy'   |
     'repairBasics'          |
     'repairRamparts'        |
     'repairWalls'           |
@@ -128,7 +177,10 @@ declare global {
     'towerRepairDefenses'   |
     'upgradersSeekEnergy'   |
     'doScience'             |
-    'boostCreeps'
+    'boostCreeps'           |
+    'dropHarvestingEnabled'
+
+  //type RoomName = ReturnType<typeof validateRoomName>
 
   type RoomName = `${'W' | 'E'}${number}${'N' | 'S'}${number}`
 
@@ -178,8 +230,69 @@ declare global {
     assignLogisticalPair():                           boolean;
     navigateWaypoints(waypoints: string | string[]):  void;
     targetPile(pileID: Id<Resource>):                 void;
+		advGet(target: Source | Id<Source> | Mineral | Id<Mineral> | Deposit | Id<Deposit> | AnyStoreStructure | Resource | Tombstone | Ruin | Id<AnyStoreStructure> | Id<Resource> | Id<Tombstone> | Id<Ruin>, pathing?: MoveToOpts, resource?: ResourceConstant, canTravel?: boolean): ScreepsReturnCode;
+		advGive(target: Creep | AnyStoreStructure | Id<AnyStoreStructure>, pathing?: MoveToOpts, resource?: ResourceConstant, canTravel?: boolean): ScreepsReturnCode
   }
   interface Room { // * ADDITIONAL ROOM OBJECT FUNCTIONS
+		creepsOfSourceAmount: {[key: string]: number}
+
+		/**
+		 * An object with keys of roles with properties of arrays of creep names belonging to the role
+		 */
+		myCreeps: {[key: string]: string[]}
+
+		/**
+		 * The number of my creeps in the room
+		 */
+		myCreepsAmount: number
+
+		roomObjects: Partial<Record<RoomObjectName, RoomObject>>
+
+		/**
+		 * An object with keys of roles and properties of the number of creeps with the role from this room
+		 */
+		creepsFromRoom: {[key: string]: string[]}
+
+		/**
+		 * The cumulative amount of creeps with a communeName value of this room's name
+		 */
+		creepsFromRoomAmount: number
+
+		/**
+		 * An object with keys of roles and properties of the number of creeps with the role from this room
+		 */
+		creepsFromRoomWithRemote: {[key: string]: {[key: string]: string[]}}
+
+		/**
+		 * Tasks that currently have a creep trying to fulfill them
+		 */
+		tasksWithResponders: {[key: string]: RoomTask}
+
+		/**
+		 * Tasks that don't currently have a responder
+		 */
+		tasksWithoutResponders: {[key: string]: RoomTask}
+
+		/**
+		 * An object, if constructed, containing keys of resource types and values of the number of those resources in the room's terminal and storage
+		 */
+		storedResources: {[key: string]: number}
+
+		/**
+		 * A matrix with indexes of packed positions and values of creep names
+		 */
+		creepPositions: PackedPosMap
+
+		/**
+		 * A matrix with indexes of packed positions and values of move requests
+		 */
+		moveRequests: PackedPosMap
+		/**
+		 * Uses caching and only operating on request to construct and get a specific roomObject based on its name
+		 * @param roomObjectName The name of the requested roomObject
+		 * @returns Either the roomObject's value, or, if the request failed, undefined
+		*/
+		get(roomObjectName: RoomObjectName): 							any | undefined
     RLP       ():                                     boolean;
     clearPPT  ():                                     void;
     enableCSL ():                                     void;
@@ -203,6 +316,7 @@ declare global {
     initFlags():                                      void;
     setRoomFlags(flags: boolean[]):                   void;
     initSettings():                                   void;
+		registerContainers():															boolean;
     registerLogisticalPairs():                        boolean;
     setRepairRampartsTo(percentMax:   number  ):      void;
     setRepairWallsTo(percentMax:      number  ):      void;
@@ -244,7 +358,9 @@ declare global {
     disableTowerRepairBasic():                        void;
     disableTowerRepairDefenses():                     void;
     disableRunnersDoMinerals():                       void;
-    disableRepairWalls():                             void;
+    disableRepairWalls():
+
+		                         void;
     toggleRunnersDoMinerals():                        void;
     toggleTowerRepairDefenses():                      void;
     toggleTowerRepairBasic():                         void;
@@ -309,6 +425,51 @@ declare global {
       neededHarvester : number,
       neededBuilders  : number,
       waypoints       : string | string[]):           boolean;
+    createWorkOrder(
+      pickup: Id<AnyStoreStructure | Tombstone>,
+      dropoff: Id<AnyStoreStructure>,
+      cargo: ResourceConstant |
+             MineralConstant |
+             MineralCompoundConstant |
+             CommodityConstant,
+      totalAmount: number,
+      priority: 1 | 2 | 3 | 4 | 5):                  void;
+
+		// Getters
+
+		readonly global: Partial<RoomGlobal>
+
+		_anchor: RoomPosition | undefined
+
+		readonly anchor: RoomPosition | undefined
+
+		readonly sourceHarvestPositions: SourceHarvestPositions
+
+		_enemyCreeps: Creep[]
+
+		readonly enemyCreeps: Creep[]
+
+		_structures: Partial<OrganizedStructures>
+
+		readonly structures: OrganizedStructures
+
+		_cSites: Partial<Record<StructureConstant, ConstructionSite[]>>
+
+		readonly cSites: Record<StructureConstant, ConstructionSite[]>
+
+		readonly cSiteTarget: Id<ConstructionSite> | undefined
+
+		_spawningStructures: SpawningStructures
+
+		readonly spawningStructures: SpawningStructures
+
+		_taskNeedingSpawningStructures: SpawningStructures
+
+		readonly taskNeedingSpawningStructures: SpawningStructures
+
+		_spawningStructuresByPriority: SpawningStructures
+
+		readonly spawningStructuresByPriority: SpawningStructures
   }
   interface RoomPosition { // * ADDITIONAL ROOMPOSITION OBJECT FUNCTIONS
     getNearbyPositions():   Array<RoomPosition>;
@@ -358,6 +519,9 @@ declare global {
       canHaul   :  boolean,
       maxEnergy?:  number,
       iteration?:  number       ):   ReturnCode;
+		spawnUpgrader(
+			creepRole	: CreepRoles,
+			maxEnergy?: number): ReturnCode;
     determineBodyparts(
       creepRole:  CreepRoles,
       maxEnergy?: number        ):   BodyPartConstant[];
@@ -369,6 +533,9 @@ declare global {
     _parsed: any;
   }
   interface Memory {
+    initialized:        boolean;
+    initializedBackup:  boolean;
+    goals:              { [key: string]: boolean | number};
     miscData?:          MiscData;
     constructed?:       true | undefined;
     roomVisuals?:       boolean;
@@ -410,7 +577,116 @@ declare global {
     customTarget?:  Id<AnyStructure>;
     savedPile?:     Id<Resource>;
   }
+
+	interface SpawnMemory {
+		spawnPriorityList:		CreepRoles[];
+	}
+
+	interface RoomGlobal {
+		[key: string]: any
+
+		// RoomObjects
+
+		stampAnchors: StampAnchors
+
+		sourceHarvestPositions: SourceHarvestPositions
+
+		source1PathLength: number
+
+		source2PathLength: number
+
+		upgradePathLength: number
+
+		tasksWithResponders: Record<string | number, RoomTask>
+
+		tasksWithoutResponders: Record<string | number, RoomTask>
+
+		plannedBase: boolean
+
+		plannedRamparts: boolean
+	}
   interface RoomMemory {
+
+    roomInit: boolean;
+		/**
+		 * A list of the efficacies of each source in the room
+		*/
+		sourceEfficacies: number[]
+		/**
+		 * A packed representation of the center of the fastFiller
+		*/
+		anchor: number
+
+		/**
+		 * A description of the room's defining properties that can be used to assume other properties
+		*/
+		type: string
+
+		/**
+		 * A set of names of remotes controlled by this room
+		*/
+		remotes: string[]
+
+		/**
+		 * If the room can be constructed by the base planner
+		*/
+		notClaimable: boolean
+
+		source1: Id<Source>
+		source2: Id<Source>
+
+		/**
+		 * A list of needs the remote wants met
+		 */
+		needs: number[]
+
+		/**
+		 * The room owner
+		 */
+		owner: string
+
+		/**
+		 * The controller's level
+		 */
+		level: number
+
+		powerEnabled: boolean
+
+		/**
+		 * The number of towers in the room
+		 */
+		towers: number
+
+		/**
+		 * If a terminal is present in the room
+		 */
+		hasTerminal: boolean
+
+		/**
+		 * The amount of stored energy in the room
+		 */
+		storedEnergy: number
+
+		/**
+		 * A set of roomNames that portals in this room go to
+		 */
+		portalsTo: string[]
+
+		/**
+		 * The last tick the room was scouted at
+		 */
+		lastScout: number | undefined
+
+		/**
+		 * The room name of the commune's claim target
+		 */
+		claimRequest: string
+
+		cSiteTargetID: Id<ConstructionSite>
+
+		stampAnchors: Partial<Record<StampTypes, number[]>>
+
+		abandoned: number | undefined
     targets:        { [key: string]: number };
     paths?:         { [key: string]: any };
     data:           RoomData;
@@ -418,6 +694,7 @@ declare global {
     objects:        RoomObjects;
     outposts:       Outposts;
     outpostOfRoom?: string;
+    roomLinkID?: string;
   }
 
   // * INTERFACES FOR GAME MEMORY SUBOBJECTS
@@ -436,7 +713,7 @@ declare global {
   }
   interface MiscData {
     [key: string]: any;
-    rooms: { [key: string]: any };
+    rooms?: { [key: string]: any };
   }
   interface GlobalSettings {
     consoleSpawnInterval: number;
@@ -458,6 +735,7 @@ declare global {
     repairSettings:     RepairSettings;
     visualSettings:     VisualSettings;
     flags:              RoomFlags;
+		upgraderMinEnergy: number;
   }
   interface ContainerSettings {
     inboxes?:     Id<StructureContainer>[];
@@ -466,18 +744,25 @@ declare global {
     lastOutbox?:  number;
   }
   interface LabSettings {
-    reagentOne?:    MineralConstant | MineralCompoundConstant;
-    reagentTwo?:    MineralConstant | MineralCompoundConstant;
-    boostCompound?: MineralBoostConstant;
+		[key: number]: LabNumSettings;
   }
+
+	interface LabNumSettings {
+		id: Id<StructureLab>;
+		mineral?: MineralConstant | MineralCompoundConstant;
+		reactionLab1?: Id<StructureLab>;
+		reactionLab2?: Id<StructureLab>;
+		runningReactions?: boolean;
+	}
   interface RoomFlags {
+		boostUpgraders?:				boolean;
     centralStorageLogic?:   boolean;
     closestConSites?:       boolean;
     craneUpgrades?:         boolean;
     displayTowerRanges?:    boolean;
     harvestersFixAdjacent?: boolean;
     runnersDoMinerals?:     boolean;
-    runnersDoPiles?:        boolean;
+    runnersPickupEnergy?:		boolean;
     repairBasics?:          boolean;
     repairRamparts?:        boolean;
     repairWalls?:           boolean;
@@ -487,6 +772,7 @@ declare global {
     upgradersSeekEnergy?:   boolean;
     doScience?:             boolean;
     boostCreeps?:           boolean;
+    dropHarvestingEnabled?: boolean;
   }
   interface RepairSettings {
     repairRampartsTo?:  number;
@@ -532,13 +818,29 @@ declare global {
     pairPaths?:           any[];
     remoteWorkRoom?:      RoomName;
     claimRooms?:          { [key: RoomName]: ClaimRoomObjective };
+		colonizationTarget?:	ColonizationSettings;
     remoteLogistics?:     { [key: RoomName]: RemoteLogistics };
     squads?:              string[];
     combatObjectives?:    CombatObjective;
     towerLRT?:            Id<AnyStructure>;
     attackSignal?:        boolean;
     controllerAttack?:    Id<StructureController>;
+		workOrders?:					WorkOrder[];
+    invaderNotices?:      any[];
+    [key: string]: any;
   }
+
+	interface WorkOrder {
+		pickup: Id<AnyStoreStructure | Tombstone>;
+		pickupRoom?: RoomName;
+		dropoff: Id<AnyStoreStructure>;
+		dropoffRoom?: RoomName;
+		cargo: ResourceConstant | MineralConstant | MineralCompoundConstant | CommodityConstant;
+		totalAmount: number;
+		amountPickedUp?: number;
+		amountDelivered?: number;
+    priority?: 1 | 2 | 3 | 4 | 5;
+	}
   interface ClaimRoomObjective {
     roomName: RoomName;
     logSpot:  Pos;
@@ -550,6 +852,16 @@ declare global {
     hasBeenClaimed: boolean;
     claimerSpawned: boolean;
   }
+	interface ColonizationSettings {
+		roomName: RoomName;
+		hasBeenClaimed: boolean;
+		energyTransferAllotment: number;
+		energyAmountLeft: number;
+		waypointRoute?: [string];
+		boostPerms: {[key: string]: boolean};
+		creepsAssigned?: number;
+		creepRegistry?: [Creep]
+	}
   interface CombatObjective {
     attackRoom?:          RoomName;
     customAttackTargets?: Id<AnyStructure> | Id<AnyStructure>[] | false;
@@ -570,7 +882,12 @@ declare global {
     sourceTwo?:     Id<StructureLink>;
     central?:       Id<StructureLink>;
     destination?:   Id<StructureLink>;
-    remotes?:       Id<StructureLink>[];
+    remotes?:       {
+      north?: Id<StructureLink>;
+      east?:  Id<StructureLink>;
+      south?: Id<StructureLink>;
+      west?:  Id<StructureLink>;
+    };
   }
   interface Outposts {
     roomList?:                string[];
@@ -723,6 +1040,10 @@ declare global {
     dryRun: boolean
   }
 
+  interface Goals {
+    firstSpawn: false,
+    any: boolean,
+  }
   interface SpawnRequest {
     body:       BodyPartConstant[]
     tier:       number
@@ -783,6 +1104,11 @@ declare global {
     invaderCore:      StructureInvaderCore[]
   }
 
+	type SpawningStructures = (StructureSpawn | StructureExtension)[]
+
+	type SourceHarvestPositions = Map<number, boolean>[]
+
+
   namespace NodeJS {
     interface Global {
       [key: string | number]: any;
@@ -800,97 +1126,40 @@ declare global {
       validateRoomName(roomName: string): roomName is RoomName;
       entries<K extends string, V extends {}>(obj: Partial<Record<K, V>>): [K, V][];
       keys<K extends string>(obj: Record<K, unknown>): K[];
+      roomExitsTo(roomName: string, direction: DirectionConstant | number | string): string;
     }
   }
 }
 
 // PURPOSE define pre-configured creep bodypart arrays as key/value pairs in an object
-const spawnVariants: {[key: string]: Array<BodyPartConstant>} = {
-  'harvester150':    [ MOVE , WORK ],
-  'harvester250':    [ MOVE , WORK , WORK ],
-  'harvester350':    [ MOVE , WORK , WORK , WORK ],
-  'harvester400':    [ MOVE , MOVE , WORK , WORK , WORK ],
-  'harvester450':    [ MOVE , WORK , WORK , WORK , WORK ],
-  'harvester550':    [ MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'harvester650':    [ MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'harvester800':    [ MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'filler100':    [ CARRY, MOVE ],
-  'filler300':    [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE ],
-  'filler400':    [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE ],
-  'filler500':    [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'filler800':    [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE ],
-  'filler1000':   [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'upgrader300':     [ CARRY, MOVE , WORK , WORK ],
-  'upgrader350':     [ CARRY, MOVE , MOVE , WORK , WORK ],
-  'upgrader400':     [ CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
-  'upgrader500':     [ CARRY, MOVE , WORK , WORK , WORK , WORK ],
-  'upgrader550':     [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK ],
-  'upgrader700':     [ CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'upgrader900':     [ CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK  ],
-  'upgrader1000':    [ CARRY, CARRY, MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'builder300':      [ CARRY, CARRY, MOVE , MOVE , WORK ],
-  'builder350':      [ CARRY, CARRY, MOVE , MOVE , MOVE , WORK ],
-  'builder400':      [ CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
-  'builder500':      [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , WORK , WORK ],
-  'builder600':      [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK ],
-  'builder700':      [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK ],
-  'builder800':      [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'builder1000':     [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'builder1100':     [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'builder1600':     [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ],
-  'repairer300':     [ CARRY, MOVE , WORK , WORK ],
-  'repairer500':     [ CARRY, CARRY, MOVE , MOVE , WORK , WORK , WORK ],
-  'repairer600':     [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK ],
-  'repairer800':     [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK] ,
-  'repairer1000':    [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'repairer1400':    [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK ],
-  'runner300':       [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE ],
-  'runner500':       [ CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'runner800':       [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'crane300':        [ CARRY, CARRY, CARRY, CARRY, MOVE , MOVE ],
-  'crane500':        [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE ],
-  'crane800':        [ CARRY, CARRY, CARRY, CARRY, WORK , WORK , WORK , WORK , WORK , MOVE , MOVE ],
-  'ranger1800':      [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK, RANGED_ATTACK ],
-  'warrior520':      [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , ATTACK, ATTACK, ATTACK, ATTACK ],
-  'warrior1400':     [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE, MOVE, MOVE, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK ],
-  'warrior1800':     [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK, ATTACK ],
-  'healer1200':      [ MOVE , MOVE , MOVE , MOVE , HEAL, HEAL, HEAL, HEAL ],
-  'healer1800':      [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , HEAL, HEAL, HEAL, HEAL, HEAL, HEAL ],
-  'beef1500':        [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'remoteGuard700':  [ TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, MOVE , MOVE , MOVE , MOVE , MOVE , ATTACK, ATTACK, ATTACK, ATTACK ],
-  'remoteLogi1200':  [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'remoteLogi1500':  [ CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ],
-  'reserver650':     [ MOVE , CLAIM ],
-  'reserver1300':    [ MOVE , MOVE , CLAIM, CLAIM ],
-  'beast1800':       [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, CARRY ],
-  'pony1250':        [ MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE , MOVE ]
-}
+
 
 // PURPOSE declare creep counting integers for spawning purposes
-let builderCount:   number = 1;
-let claimerCount:   number = 1;
-let fillerCount: number = 1;
-let craneCount:     number = 1;
-let harvesterCount: number = 1;
-let healerCount:    number = 1;
-let invaderCount:   number = 1;
-let minerCount:     number = 1;
-let providerCount:  number = 1;
-let rangerCount:    number = 1;
-let rebooterCount:  number = 1;
-let repairerCount:  number = 1;
-let reserverCount:  number = 1;
-let runnerCount:    number = 1;
-let scientistCount: number = 1;
-let scoutCount:     number = 1;
-let upgraderCount:  number = 1;
-let warriorCount:   number = 1;
-
-let remoteBuilderCount:     number = 1;
-let remoteGuardCount:       number = 1;
-let remoteHarvesterCount:   number = 1;
-let remoteLogisticianCount: number = 1;
-let remoteRunnerCount:      number = 1;
+let creepRoleCounts: {[key: string]: any} = {
+	builder: 1,
+	claimer: 1,
+	filler: 1,
+	collector: 1,
+	crane: 1,
+	harvester: 1,
+	healer: 1,
+	invader: 1,
+	miner: 1,
+	provider: 1,
+	ranger: 1,
+	rebooter: 1,
+	repairer: 1,
+	reserver: 1,
+	runner: 1,
+	scientist: 1,
+	scout: 1,
+	upgrader: 1,
+	warrior: 1,
+	remoteBuilder: 1,
+	remoteGuard: 1,
+	remoteHarvester: 1,
+	remoteLogistician: 1,
+}
 
 // PURPOSE declare other global variables
 let tickCount:            number  = 0;
@@ -899,132 +1168,23 @@ let spawnAnnounced:       boolean = false;
 let harvesterDying:       boolean = false;
 let runnerDying:          boolean = false;
 let reserverDying:        boolean = false;
-let fillerDying:       boolean = false;
+let fillerDying:          boolean = false;
 let remoteHarvesterDying: boolean = false;
 let remoteGuardDying:     boolean = false;
 let minerDying:           boolean = false;
 
 // PURPOSE initialize top level Memory objects if needed
-if (Memory.miscData === undefined)
-  Memory.miscData = {
-  'containerCounter':     0,
-  'outpostRoomCounter':   0,
-  'outpostSourceCounter': 0,
-  'outpostCounterRv':     0,
-  'outpostCounterRG':     0,
-  'rooms': {
-    'W5N43': {}
-    }
-  };
 
-if (Memory.globalSettings === undefined || Memory.globalSettings.creepSettings === undefined) {
-  const globalSettings: GlobalSettings = {
-    consoleSpawnInterval: 25,
-    alertDisabled: true,
-    reusePathValue: 5,
-    ignoreCreeps: true,
-    creepSettings: {
-      builder: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      claimer: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      filler: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      crane: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      harvester: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      healer: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      invader: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      miner: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      provider: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      ranger: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      rebooter: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remotebuilder: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remoteguard: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remoteharvester: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remotelogistician: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      remoterunner: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      repairer: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      reserver: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      runner: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      scientist: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      scout: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      upgrader: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      },
-      warrior: {
-        reusePathValue: 3,
-        ignoreCreeps: true
-      }
-    }
-  };
-  Memory.globalSettings = globalSettings;
+if (Memory.initialized === undefined && Memory.initializedBackup === undefined) {
+
+  if (initGlobal() === true) {
+    Memory.initialized = true;
+    Memory.initializedBackup = true;
+    Memory.goals.initSetup = true;
+  }
 }
 
-if (Memory.colonies === undefined) {
-  const colonies: Colonies = { colonyList: [], registry: {} };
-  Memory.colonies = colonies;
-}
+global.roomExitsTo = roomExitsTo;
 
 //*  When compiling TS to JS and bundling with rollup,
 //*  the line numbers and file names in error messages change
@@ -1038,13 +1198,6 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
   MemHack.pretick();
 
-  if (typeof Memory.colonies === undefined) Memory.colonies = {};
-  if (typeof Memory.colonies.colonyList === undefined) Memory.colonies.colonyList = [];
-  if (Memory.globalSettings === undefined) {
-    Memory.globalSettings = {};
-    Memory.globalSettings.consoleSpawnInterval = 10;
-  }
-
   calcTickTime();
 
   // PURPOSE Generate pixels with extra CPU time
@@ -1056,99 +1209,34 @@ export const loop = ErrorMapper.wrapLoop(() => {
   }
 
   // PURPOSE Remove creeps from Memory after they die
-  for (let name in Memory.creeps) {
-    if (!Game.creeps[name]) {
-      const role: CreepRoles = Memory.creeps[name].role;
-      delete Memory.creeps[name];
-      console.log('[GENERAL]: Clearing nonexistent creep memory: ', name);
-      // reset naming counter for type of creep that died
-      switch (role) {
-        case 'builder':
-          builderCount = 1;
-          break;
-        case 'claimer':
-          claimerCount = 1;
-          break;
-        case 'filler':
-          fillerCount = 1;
-          break;
-        case 'crane':
-          craneCount = 1;
-          break;
-        case 'harvester':
-          harvesterCount = 1;
-          break;
-        case 'healer':
-          healerCount = 1;
-          break;
-        case 'invader':
-          invaderCount = 1;
-          break;
-        case 'miner':
-          minerCount = 1;
-          break;
-        case 'provider':
-          providerCount = 1;
-          break;
-        case 'ranger':
-          rangerCount = 1;
-          break;
-        case 'rebooter':
-          rebooterCount = 1;
-          break;
-        case 'repairer':
-          repairerCount = 1;
-          break;
-        case 'reserver':
-          reserverCount = 1;
-          break;
-        case 'runner':
-          runnerCount = 1;
-          break;
-        case 'scientist':
-          scientistCount = 1;
-          break;
-        case 'scout':
-          scoutCount = 1;
-          break;
-        case 'upgrader':
-          upgraderCount = 1;
-          break;
-        case 'warrior':
-          warriorCount = 1;
-          break;
-        case 'remotebuilder':
-          remoteBuilderCount = 1;
-          break;
-        case 'remoteguard':
-          remoteGuardCount = 1;
-          break;
-        case 'remoteharvester':
-          remoteHarvesterCount = 1;
-          break;
-        case 'remotelogistician':
-          remoteLogisticianCount = 1;
-          break;
-        case 'remoterunner':
-          remoteRunnerCount = 1;
-          break;
-      }
-    }
-  }
+	creepCleanup(creepRoleCounts);
+
+  //const lab: StructureLab = Game.getObjectById('6656a5d74c1aa628635181ee');
+	//const reactionLab1: StructureLab = Game.getObjectById('6656e2437e802e6fb76feb23');
+	//const reactionLab2: StructureLab = Game.getObjectById('6656a5d74c1aa628635181ee');
+	//if (lab.cooldown === 0)
+	//	lab.runReaction(reactionLab1,reactionLab2);
+
+
 
   //: main code loop to run inside each room containing our units/structures
   _.forEach(Game.rooms, function (room: Room) {
 
     const rMem = room.memory;
 
+    if (rMem.roomInit === undefined) {
+      room.initRoom();
+      rMem.roomInit = true;
+    }
+      /*if (room.controller && room.controller.my) {
+        if (room.name === Memory.miscData.firstColonyRoom && room.controller.level !== Memory.goals.firstColonyRC) {
+          Memory.goals.firstColonyRC = room.controller.level;
+        }
+      }*/
+
     if (!rMem.objects) {
       console.log(room.link() + 'No room objects in memory. Caching.')
       room.cacheObjects();
-    }
-
-    if (!rMem.settings) {
-      room.initSettings();
-      room.initFlags();
     }
 
     if (Memory.miscData.rooms[room.name] === undefined)
@@ -1158,6 +1246,13 @@ export const loop = ErrorMapper.wrapLoop(() => {
     const numCSitesPrevious: number = rMem.data.numCSites || 0;
     rMem.data.numCSites = cSites.length;
     const numCSites: number = rMem.data.numCSites;
+
+    if (room.memory.outpostOfRoom && cSites && cSites.length) {
+      const colonyRoom = Game.rooms[room.memory.outpostOfRoom];
+      if (!colonyRoom.memory.data.remoteCSites)
+        colonyRoom.memory.data.remoteCSites = {};
+      colonyRoom.memory.data.remoteCSites[room.name] = cSites;
+    }
 
     if (numCSites < numCSitesPrevious) {
       room.cacheObjects();
@@ -1173,7 +1268,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       if (cSite.progress > 0) buildProgress(cSite, room);
     });
 
-    //: FOR ROOMS OWNED BY BOT
+    //: FOR ROOMS OWNED BY BOT ===========================================================================================================
     if (room && room.controller && room.controller.my) {
 
       const data:     RoomData     = rMem.data;
@@ -1238,286 +1333,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
       //: SPAWN VARIANT ALLOCATION
 
       // PURPOSE define working variant set for use in the main loop, assigned based on current energy capacity limits
-      let availableVariants:{[key: string]: {body: BodyPartConstant[], cost: number}} = {
-        harvester:  { body: [], cost: 0},
-        filler:  { body: [], cost: 0},
-        upgrader:   { body: [], cost: 0},
-        builder:    { body: [], cost: 0},
-        repairer:   { body: [], cost: 0},
-        runner:     { body: [], cost: 0},
-        warrior:    { body: [], cost: 0},
-        crane:      { body: [], cost: 0},
-        remoteGuard:{ body: [], cost: 0},
-        remoteLogi: { body: [], cost: 0},
-        reserver:   { body: [], cost: 0},
-        healer:     { body: [], cost: 0},
-        ranger:     { body: [], cost: 0},
-        beast:      { body: [], cost: 0},
-        pony:       { body: [], cost: 0},
-        beef:       { body: [], cost: 0}
-      }
+      const availableVariants = determineVariants(room.energyCapacityAvailable);
 
-      if (room.energyCapacityAvailable === 300) {
-        availableVariants.harvester.body      = spawnVariants.harvester250;
-        availableVariants.harvester.cost      = 250;
-        availableVariants.filler.body         = spawnVariants.filler100;
-        availableVariants.filler.cost         = 100;
-        availableVariants.upgrader.body       = spawnVariants.upgrader300;
-        availableVariants.upgrader.cost       = 300;
-        availableVariants.builder.body        = spawnVariants.builder300;
-        availableVariants.builder.cost        = 300;
-        availableVariants.repairer.body       = spawnVariants.repairer300;
-        availableVariants.repairer.cost       = 300;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane300;
-        availableVariants.crane.cost          = 300;
-      } else if (room.energyCapacityAvailable <= 350) {
-        availableVariants.harvester.body      = spawnVariants.harvester350;
-        availableVariants.harvester.cost      = 350;
-        availableVariants.filler.body         = spawnVariants.filler300;
-        availableVariants.filler.cost         = 300;
-        availableVariants.upgrader.body       = spawnVariants.upgrader350;
-        availableVariants.upgrader.cost       = 350;
-        availableVariants.builder.body        = spawnVariants.builder350;
-        availableVariants.builder.cost        = 350;
-        availableVariants.repairer.body       = spawnVariants.repairer300;
-        availableVariants.repairer.cost       = 300;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane300;
-        availableVariants.crane.cost          = 300;
-      } else if (room.energyCapacityAvailable <= 400) {
-        availableVariants.harvester.body      = spawnVariants.harvester400;
-        availableVariants.harvester.cost      = 400;
-        availableVariants.filler.body         = spawnVariants.filler300;
-        availableVariants.filler.cost         = 300;
-        availableVariants.upgrader.body       = spawnVariants.upgrader400;
-        availableVariants.upgrader.cost       = 400;
-        availableVariants.builder.body        = spawnVariants.builder350;
-        availableVariants.builder.cost        = 350;
-        availableVariants.repairer.body       = spawnVariants.repairer300;
-        availableVariants.repairer.cost       = 300;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane300;
-        availableVariants.crane.cost          = 300;
-      } else if (room.energyCapacityAvailable <= 500) {
-        availableVariants.harvester.body      = spawnVariants.harvester450;
-        availableVariants.harvester.cost      = 450;
-        availableVariants.filler.body         = spawnVariants.filler300;
-        availableVariants.filler.cost         = 300;
-        availableVariants.upgrader.body       = spawnVariants.upgrader400;
-        availableVariants.upgrader.cost       = 400;
-        availableVariants.builder.body        = spawnVariants.builder350;
-        availableVariants.builder.cost        = 350;
-        availableVariants.repairer.body       = spawnVariants.repairer300;
-        availableVariants.repairer.cost       = 300;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane300;
-        availableVariants.crane.cost          = 300;
-      } else if (room.energyCapacityAvailable <= 550) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler300;
-        availableVariants.filler.cost         = 300;
-        availableVariants.upgrader.body       = spawnVariants.upgrader550;
-        availableVariants.upgrader.cost       = 550;
-        availableVariants.builder.body        = spawnVariants.builder500;
-        availableVariants.builder.cost        = 500;
-        availableVariants.repairer.body       = spawnVariants.repairer500;
-        availableVariants.repairer.cost       = 500;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.warrior.body        = spawnVariants.warrior520;
-        availableVariants.warrior.cost        = 520;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-      } else if (room.energyCapacityAvailable <= 600) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler300;
-        availableVariants.filler.cost         = 300;
-        availableVariants.upgrader.body       = spawnVariants.upgrader550;
-        availableVariants.upgrader.cost       = 550;
-        availableVariants.builder.body        = spawnVariants.builder500;
-        availableVariants.builder.cost        = 500;
-        availableVariants.repairer.body       = spawnVariants.repairer500;
-        availableVariants.repairer.cost       = 500;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.warrior.body        = spawnVariants.warrior520;
-        availableVariants.warrior.cost        = 520;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-      } else if (room.energyCapacityAvailable <= 700) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler500;
-        availableVariants.filler.cost         = 500;
-        availableVariants.upgrader.body       = spawnVariants.upgrader550;
-        availableVariants.upgrader.cost       = 550;
-        availableVariants.builder.body        = spawnVariants.builder600;
-        availableVariants.builder.cost        = 600;
-        availableVariants.repairer.body       = spawnVariants.repairer500;
-        availableVariants.repairer.cost       = 500;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-        availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
-        availableVariants.remoteGuard.cost    = 700;
-      } else if (room.energyCapacityAvailable <= 800) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler500;
-        availableVariants.filler.cost         = 500;
-        availableVariants.upgrader.body       = spawnVariants.upgrader700;
-        availableVariants.upgrader.cost       = 700;
-        availableVariants.builder.body        = spawnVariants.builder600;
-        availableVariants.builder.cost        = 600;
-        availableVariants.repairer.body       = spawnVariants.repairer500;
-        availableVariants.repairer.cost       = 500;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-        availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
-        availableVariants.remoteGuard.cost    = 700;
-        availableVariants.reserver.body       = spawnVariants.reserver650;
-        availableVariants.reserver.cost       = 650;
-      } else if (room.energyCapacityAvailable <= 900) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler500;
-        availableVariants.filler.cost         = 500;
-        availableVariants.upgrader.body       = spawnVariants.upgrader800;
-        availableVariants.upgrader.cost       = 800;
-        availableVariants.builder.body        = spawnVariants.builder700;
-        availableVariants.builder.cost        = 700;
-        availableVariants.repairer.body       = spawnVariants.repairer600;
-        availableVariants.repairer.cost       = 600;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-        availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
-        availableVariants.remoteGuard.cost    = 700;
-        availableVariants.reserver.body       = spawnVariants.reserver650;
-        availableVariants.reserver.cost       = 650;
-      } else if (room.energyCapacityAvailable <= 1000) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler500;
-        availableVariants.filler.cost         = 500;
-        availableVariants.upgrader.body       = spawnVariants.upgrader700;
-        availableVariants.upgrader.cost       = 700;
-        availableVariants.builder.body        = spawnVariants.builder800;
-        availableVariants.builder.cost        = 800;
-        availableVariants.repairer.body       = spawnVariants.repairer800;
-        availableVariants.repairer.cost       = 800;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-        availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
-        availableVariants.remoteGuard.cost    = 700;
-        availableVariants.reserver.body       = spawnVariants.reserver650;
-        availableVariants.reserver.cost       = 650;
-      } else if (room.energyCapacityAvailable <= 1250) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler500;
-        availableVariants.filler.cost         = 500;
-        availableVariants.upgrader.body       = spawnVariants.upgrader700;
-        availableVariants.upgrader.cost       = 700;
-        availableVariants.builder.body        = spawnVariants.builder800;
-        availableVariants.builder.cost        = 800;
-        availableVariants.repairer.body       = spawnVariants.repairer800;
-        availableVariants.repairer.cost       = 800;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-        availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
-        availableVariants.remoteGuard.cost    = 700;
-        availableVariants.reserver.body       = spawnVariants.reserver650;
-        availableVariants.reserver.cost       = 650;
-      } else if (room.energyCapacityAvailable <= 1300) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler800;
-        availableVariants.filler.cost         = 800;
-        availableVariants.upgrader.body       = spawnVariants.upgrader700;
-        availableVariants.upgrader.cost       = 700;
-        availableVariants.builder.body        = spawnVariants.builder1000;
-        availableVariants.builder.cost        = 1000;
-        availableVariants.repairer.body       = spawnVariants.repairer1000;
-        availableVariants.repairer.cost       = 1000;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-        availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
-        availableVariants.remoteGuard.cost    = 700;
-        availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1200;
-        availableVariants.remoteLogi.cost     = 1200;
-        availableVariants.reserver.body       = spawnVariants.reserver1300;
-        availableVariants.reserver.cost       = 1300;
-      } else if (room.energyCapacityAvailable <= 1600) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler800;
-        availableVariants.filler.cost         = 800;
-        availableVariants.upgrader.body       = spawnVariants.upgrader900;
-        availableVariants.upgrader.cost       = 900;
-        availableVariants.builder.body        = spawnVariants.builder1100;
-        availableVariants.builder.cost        = 1100;
-        availableVariants.repairer.body       = spawnVariants.repairer1000;
-        availableVariants.repairer.cost       = 1000;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-        availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
-        availableVariants.remoteGuard.cost    = 700;
-        availableVariants.warrior.body        = spawnVariants.warrior1400;
-        availableVariants.warrior.cost        = 1400;
-        availableVariants.healer.body         = spawnVariants.healer1200;
-        availableVariants.healer.cost         = 1200;
-        availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1500;
-        availableVariants.remoteLogi.cost     = 1500;
-        availableVariants.reserver.body       = spawnVariants.reserver1300;
-        availableVariants.reserver.cost       = 1300;
-      } else if (room.energyCapacityAvailable <= 1800) {
-        availableVariants.harvester.body      = spawnVariants.harvester550;
-        availableVariants.harvester.cost      = 550;
-        availableVariants.filler.body         = spawnVariants.filler800;
-        availableVariants.filler.cost         = 800;
-        availableVariants.upgrader.body       = spawnVariants.upgrader900;
-        availableVariants.upgrader.cost       = 900;
-        availableVariants.builder.body        = spawnVariants.builder1100;
-        availableVariants.builder.cost        = 1100;
-        availableVariants.repairer.body       = spawnVariants.repairer1000;
-        availableVariants.repairer.cost       = 1000;
-        availableVariants.runner.body         = spawnVariants.runner300;
-        availableVariants.runner.cost         = 300;
-        availableVariants.crane.body          = spawnVariants.crane500;
-        availableVariants.crane.cost          = 500;
-        availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
-        availableVariants.remoteGuard.cost    = 700;
-        availableVariants.warrior.body        = spawnVariants.warrior1800;
-        availableVariants.warrior.cost        = 1800;
-        availableVariants.ranger.body         = spawnVariants.ranger1800;
-        availableVariants.ranger.cost         = 1800;
-        availableVariants.healer.body         = spawnVariants.healer1800;
-        availableVariants.healer.cost         = 1800;
-        availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1500;
-        availableVariants.remoteLogi.cost     = 1500;
-        availableVariants.reserver.body       = spawnVariants.reserver1300;
-        availableVariants.reserver.cost       = 1300;
-      }
 
       //: PER-ROOM LINK MANAGEMENT LOGIC
       if (rMem.objects.links) {
@@ -1530,12 +1347,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
           if (rMem.data.linkRegistry.sourceOne      )  counter++;
           if (rMem.data.linkRegistry.central        )  counter++;
           if (rMem.data.linkRegistry.sourceTwo      )  counter++;
-          if (rMem.data.linkRegistry.destination) counter++;
+          if (rMem.data.linkRegistry.destination    )  counter++;
           if (rMem.data.linkRegistry.remotes) {
             for (let link in rMem.data.linkRegistry.remotes)
               counter++;
           }
-          if (rMem.objects.links.length !== counter )  room.registerLinks();
+          //if (rMem.objects.links.length !== counter )  room.registerLinks();
         }
 
         let linkOne:      StructureLink;
@@ -1543,14 +1360,24 @@ export const loop = ErrorMapper.wrapLoop(() => {
         let linkCentral:  StructureLink;
         let linkDest:     StructureLink;
         let linkRem1:     StructureLink;
+				let linkRem2:			StructureLink;
 
 
         if (rMem.data.linkRegistry.sourceOne  ) linkOne     = Game.getObjectById(rMem.data.linkRegistry.sourceOne   );
         if (rMem.data.linkRegistry.sourceTwo  ) linkTwo     = Game.getObjectById(rMem.data.linkRegistry.sourceTwo   );
         if (rMem.data.linkRegistry.destination) linkDest    = Game.getObjectById(rMem.data.linkRegistry.destination );
         if (rMem.data.linkRegistry.central    ) linkCentral = Game.getObjectById(rMem.data.linkRegistry.central     );
-        if (rMem.data.linkRegistry.remotes[0] ) linkRem1    = Game.getObjectById(rMem.data.linkRegistry.remotes[ 0 ]);
 
+        const remoteLinkIDs = Object.values(rMem.data.linkRegistry.remotes);
+
+        for (let i = 0; i < remoteLinkIDs.length; i++) {
+          const remoteLink = Game.getObjectById(remoteLinkIDs[i]);
+
+          if (linkCentral && remoteLink) {
+            if ((remoteLink.store.getUsedCapacity(RESOURCE_ENERGY) > 100) && remoteLink.cooldown == 0 && (linkCentral.store.getFreeCapacity(RESOURCE_ENERGY) >= remoteLink.store.getUsedCapacity(RESOURCE_ENERGY)))
+              remoteLink.transferEnergy(linkCentral);
+          }
+        }
         if (linkCentral && linkOne) {
           if ((linkOne.store.getFreeCapacity(RESOURCE_ENERGY) < 100) && linkOne.cooldown == 0 && (linkCentral.store.getFreeCapacity(RESOURCE_ENERGY) >= linkOne.store.getUsedCapacity(RESOURCE_ENERGY)))
             linkOne.transferEnergy(linkCentral);
@@ -1564,9 +1391,50 @@ export const loop = ErrorMapper.wrapLoop(() => {
             linkCentral.transferEnergy(linkDest);
         }
 
-        if (linkCentral && linkRem1) {
-          if ((linkRem1.store.getUsedCapacity(RESOURCE_ENERGY) > 700) && linkRem1.cooldown == 0 && (linkCentral.store.getFreeCapacity(RESOURCE_ENERGY) >= linkRem1.store.getUsedCapacity(RESOURCE_ENERGY)))
+        /*if (linkCentral && linkRem1) {
+          if ((linkRem1.store.getUsedCapacity(RESOURCE_ENERGY) > 100) && linkRem1.cooldown == 0 && (linkCentral.store.getFreeCapacity(RESOURCE_ENERGY) >= linkRem1.store.getUsedCapacity(RESOURCE_ENERGY)))
             linkRem1.transferEnergy(linkCentral);
+        }
+
+				if (linkCentral && linkRem2) {
+					if ((linkRem2.store.getUsedCapacity(RESOURCE_ENERGY) > 100) && linkRem2.cooldown == 0 && (linkCentral.store.getFreeCapacity(RESOURCE_ENERGY) >= linkRem2.store.getUsedCapacity(RESOURCE_ENERGY)))
+						linkRem2.transferEnergy(linkCentral);
+				}*/
+      }
+
+			//: PER-ROOM LAB MANAGEMENT LOGIC
+      if (room.memory.objects.labs) {
+        if (room.memory.settings.labSettings && Object.keys(room.memory.settings.labSettings).length) {
+          for (let i = 1; i < (Object.keys(room.memory.settings.labSettings).length + 1); i++) {
+            const thisLabData = room.memory.settings.labSettings[i];
+            if (thisLabData.runningReactions !== undefined && thisLabData.runningReactions === true && thisLabData.reactionLab1 !== undefined && thisLabData.reactionLab2 !== undefined) {
+              const thisLab = Game.getObjectById(thisLabData.id);
+              if (thisLab.cooldown == 0) {
+                const reactionLab1 = Game.getObjectById(thisLabData.reactionLab1);
+                const reactionLab2 = Game.getObjectById(thisLabData.reactionLab2);
+                const result = thisLab.runReaction(reactionLab1, reactionLab2);
+
+                switch (result) {
+                  case ERR_NOT_ENOUGH_RESOURCES:
+                    log(`[LAB${Object.keys(room.memory.settings.labSettings[i])}]: Source labs are out of resources for reaction processing.`, room);
+                    room.memory.settings.labSettings[i].runningReactions = false;
+                    break;
+                  case ERR_FULL:
+                    log(`[LAB${Object.keys(room.memory.settings.labSettings[i])}]: Destination lab is full and cannot continue reaction processing. Running Reactions flag set false.`, room);
+                    room.memory.settings.labSettings[i].runningReactions = false;
+                    break;
+                  case ERR_INVALID_ARGS:
+                    log(`[LAB${Object.keys(room.memory.settings.labSettings[i])}]: The processing lab cannot make use of the assigned source labs' input materials.`, room);
+                    break;
+                  case ERR_TIRED:
+                    log(`[LAB${Object.keys(room.memory.settings.labSettings[i])}]: console.log();The processing lab is still cooling down.`, room);
+                    break;
+                }
+              }
+            }
+            else
+              continue
+          }
         }
       }
 
@@ -1575,33 +1443,35 @@ export const loop = ErrorMapper.wrapLoop(() => {
       //$ >#######################################################################################################################< $\\
 
       // pull creep role caps from room memory, or set to default value if none are set
-      let harvesterTarget:  number = _.get(room.memory, ['targets', 'harvester'], 2);
-      let fillerTarget:  number = _.get(room.memory, ['targets', 'filler'], 2);
-      let upgraderTarget:   number = _.get(room.memory, ['targets', 'upgrader' ], 2);
-      let builderTarget:    number = _.get(room.memory, ['targets', 'builder'  ], 2);
-      let repairerTarget:   number = _.get(room.memory, ['targets', 'repairer' ], 1);
-      let runnerTarget:     number = _.get(room.memory, ['targets', 'runner'   ], 3);
-      let rebooterTarget:   number = _.get(room.memory, ['targets', 'rebooter' ], 0);
-      let reserverTarget:   number = _.get(room.memory, ['targets', 'reserver' ], 0);
-      let rangerTarget:     number = _.get(room.memory, ['targets', 'ranger'   ], 0);
-      let warriorTarget:    number = _.get(room.memory, ['targets', 'warrior'  ], 0);
-      let healerTarget:     number = _.get(room.memory, ['targets', 'healer'   ], 0);
-      let craneTarget:      number = _.get(room.memory, ['targets', 'crane'    ], 0);
-      let minerTarget:      number = _.get(room.memory, ['targets', 'miner'    ], 0);
-      let scientistTarget:  number = _.get(room.memory, ['targets', 'scientist'], 0);
-      let scoutTarget:      number = _.get(room.memory, ['targets', 'scout'    ], 0);
+      let harvesterTarget :  number = _.get(room.memory, ['targets', 'harvester'], 2);
+      let fillerTarget    :  number = _.get(room.memory, ['targets', 'filler'		], 2);
+			let collectorTarget :  number = _.get(room.memory, ['targets', 'collector'], 2);
+      let upgraderTarget  :  number = _.get(room.memory, ['targets', 'upgrader' ], 2);
+      let builderTarget   :  number = _.get(room.memory, ['targets', 'builder'  ], 2);
+      let repairerTarget  :  number = _.get(room.memory, ['targets', 'repairer' ], 1);
+      let runnerTarget    :  number = _.get(room.memory, ['targets', 'runner'   ], 3);
+      let rebooterTarget  :  number = _.get(room.memory, ['targets', 'rebooter' ], 0);
+      let reserverTarget  :  number = _.get(room.memory, ['targets', 'reserver' ], 0);
+      let rangerTarget    :  number = _.get(room.memory, ['targets', 'ranger'   ], 0);
+      let warriorTarget   :  number = _.get(room.memory, ['targets', 'warrior'  ], 0);
+      let healerTarget    :  number = _.get(room.memory, ['targets', 'healer'   ], 0);
+      let craneTarget     :  number = _.get(room.memory, ['targets', 'crane'    ], 0);
+      let minerTarget     :  number = _.get(room.memory, ['targets', 'miner'    ], 0);
+      let scientistTarget :  number = _.get(room.memory, ['targets', 'scientist'], 0);
+      let scoutTarget     :  number = _.get(room.memory, ['targets', 'scout'    ], 0);
 
 
       let remoteHarvesterTarget:   number;
       if (rMem.outposts !== undefined && rMem.outposts.aggregateSourceList !== undefined) remoteHarvesterTarget = rMem.outposts.aggregateSourceList.length;
-      else remoteHarvesterTarget          = _.get(room.memory, ['targets', 'remoteharvester'  ], 1);
-      let remoteBuilderTarget:     number = _.get(room.memory, ['targets', 'remotebuilder'    ], 1);
-      let remoteGuardTarget:       number = _.get(room.memory, ['targets', 'remoteguard'      ], 1);
-      let remoteLogisticianTarget: number = _.get(room.memory, ['targets', 'remotelogistician'], 1);
+      else remoteHarvesterTarget          = _.get(room.memory, ['targets', 'remoteharvester'  ], 0);
+      let remoteBuilderTarget:     number = _.get(room.memory, ['targets', 'remotebuilder'    ], 0);
+      let remoteGuardTarget:       number = _.get(room.memory, ['targets', 'remoteguard'      ], 0);
+      let remoteLogisticianTarget: number = _.get(room.memory, ['targets', 'remotelogistician'], 0);
 
       // pull current amount of creeps alive by roleForQuota
       let harvesters:         Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'harvester'         &&      creep.memory.homeRoom == roomName);
-      let fillers:         Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'filler'         &&      creep.memory.homeRoom == roomName);
+      let fillers:         		Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'filler'    	      &&      creep.memory.homeRoom == roomName);
+			let collectors:         Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'collector'  	      &&      creep.memory.homeRoom == roomName);
       let upgraders:          Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'upgrader'          &&      creep.memory.homeRoom == roomName);
       let builders:           Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'builder'           &&      creep.memory.homeRoom == roomName);
       let repairers:          Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'repairer'          &&      creep.memory.homeRoom == roomName);
@@ -1620,6 +1490,27 @@ export const loop = ErrorMapper.wrapLoop(() => {
       let remoteBuilders:     Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remotebuilder'     &&      creep.memory.homeRoom == roomName);
       let remoteGuards:       Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remoteguard'       &&      creep.memory.homeRoom == roomName);
       let remoteLogisticians: Creep[] = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remotelogistician' &&      creep.memory.homeRoom == roomName);
+
+      const currentCreepsList = {'harvesters': harvesters,
+        'fillers': fillers,
+        'upgraders': upgraders,
+        'builders': builders,
+        'repairers': repairers,
+        'runners': runners,
+        'rebooters': rebooters,
+        'reservers': reservers,
+        'rangers': rangers,
+        'warriors': warriors,
+        'healers': healers,
+        'cranes': cranes,
+        'miners': miners,
+        'scientists': scientists,
+        'scouts': scouts,
+        'remoteharvesters': remoteHarvesters,
+        'remotebuilders': remoteBuilders,
+        'remoteguards': remoteGuards,
+        'remotelogisticians': remoteLogisticians
+      };
 
       let sites: Array<ConstructionSite> = room.find(FIND_CONSTRUCTION_SITES);
       let remoteSites: Array<ConstructionSite> = [];
@@ -1640,6 +1531,21 @@ export const loop = ErrorMapper.wrapLoop(() => {
         if (hostiles.length > 0) {
           const hostileOwner: string = hostiles[0].owner.username;
           const creepName:    string = hostiles[0].name;
+
+          if (hostileOwner === 'Invader') {
+            if (room.memory.outpostOfRoom) {
+              const colonyRoom = room.memory.outpostOfRoom;
+              const invaderNotice = {
+                invaderAlive: true,
+                defenderSpawned: false,
+                roomTarget: room.name
+              }
+              if (Game.rooms[colonyRoom].memory.data.invaderNotices === undefined)
+                Game.rooms[colonyRoom].memory.data.invaderNotices = [];
+              Game.rooms[colonyRoom].memory.data.invaderNotices.push(invaderNotice);
+
+            }
+          }
           log(hostileOwner + ': -----------------HOSTILE CREEPS PRESENT----------------- ' + creepName, room);
           room.visual.rect(-1, -1, 51, 51, { fill: '#440000', stroke: '#ff0000', opacity: 0.2, strokeWidth: 0.2 });
           if (fillers.length) {
@@ -1671,11 +1577,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
         availableVariants.crane.cost        = 800;
       }
 
-      if (room.storage) {
-        if (room.energyAvailable <= 300 && room.storage.store[ RESOURCE_ENERGY ] <= 1000 && creepCount <= 1)
-        availableVariants.harvester.body    = spawnVariants.harvester250;
-        availableVariants.filler.body    = spawnVariants.filler300;
-      }
+
       // * if we have no fillers, and our energy supply is not enough for a 500 energy spawn, do a 300.
       if (fillers.length == 0) {
         if (room.energyAvailable < 500)
@@ -1758,23 +1660,54 @@ export const loop = ErrorMapper.wrapLoop(() => {
         let readySpawn: StructureSpawn = spawns[0];
         for (let i = 0; i < spawns.length; i++) {
           const thisSpawn: StructureSpawn = spawns[i];
+
+						if (thisSpawn.memory.spawnPriorityList === undefined)
+							thisSpawn.memory.spawnPriorityList = [
+								'harvester',
+								'collector',
+								'filler',
+								'runner',
+								'crane',
+								'repairer',
+								'builder',
+								'upgrader',
+								'remoteharvester',
+								'remoterunner',
+								'remotebuilder',
+								'reserver',
+								'remoteguard',
+								'claimer',
+								'miner',
+								'healer',
+								'warrior',
+								'ranger',
+								'invader',
+								'provider',
+								'rebooter',
+								'remotelogistician',
+								'scientist',
+								'scout',
+								]
+
+
           if (thisSpawn.spawning) continue;
           else readySpawn = thisSpawn;
         }
         if (!readySpawn.spawning) {
           const numCreeps: number = Object.keys(Game.creeps).length;
           if (numCreeps == 0 && room.energyAvailable <= 300 && (!room.storage || (room.storage &&  room.storage.store[RESOURCE_ENERGY] < 500)) && room.controller.level > 1) {
-            newName = colonyName + '_Rb' + rebooterCount;
+            newName = colonyName + '_Rb' + creepRoleCounts.rebooter;
             while (readySpawn.spawnCreep([WORK, WORK, MOVE], newName, { memory: { role: 'rebooter', roleForQuota: 'rebooter', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-              rebooterCount++;
-              newName = colonyName + '_Rb' + rebooterCount;
+              creepRoleCounts.rebooter++;
+              newName = colonyName + '_Rb' + creepRoleCounts.rebooter;
             }
             log('Spawning an emergency Rebooter...', room);
-          } else if (numCreeps <= 1 && room.energyAvailable <= 300 && room.storage && room.storage.store[RESOURCE_ENERGY] >= 500) {
+          } else if (fillers.length <= 1 && room.energyAvailable <= 300 && room.storage && room.storage.store[RESOURCE_ENERGY] >= 500) {
             const result = readySpawn.spawnCreep([CARRY, MOVE], 'Collie the Emergency Filler Creep', { memory: { role: 'filler', roleForQuota: 'filler', homeRoom: roomName } });
             switch (result) {
               case OK:
                 log('Spawning an emergency Filler...', room);
+                break;
               case ERR_BUSY:
               case ERR_NOT_ENOUGH_ENERGY:
               case ERR_INVALID_ARGS:
@@ -1784,176 +1717,210 @@ export const loop = ErrorMapper.wrapLoop(() => {
                 readySpawn.spawnCreep([CARRY, MOVE], 'Collie the Emergency Filler Back-up Creep', { memory: { role: 'filler', roleForQuota: 'filler', homeRoom: roomName } });
                 break;
             }
-          } else {
+          } else if (room.memory.data.invaderNotices && room.memory.data.invaderNotices.length) {
+            const invaderNotices = room.memory.data.invaderNotices;
+            for (let i = 0; i < invaderNotices.length; i++) {
+              const defenderName = colonyName + '_Defender' + randomInt(1,10);
+              const result = readySpawn.spawnCreep([TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK], defenderName, {memory: {role: 'ranger', roleForQuota: 'ranger', homeRoom: 'E32N28', attackRoom: invaderNotices[i].roomTarget}})
+
+              switch (result) {
+                case OK:
+                  invaderNotices.pop();
+                  break;
+                case ERR_NAME_EXISTS:
+                  const defenderName = colonyName + '_Defender' + randomInt(10,20);
+                  readySpawn.spawnCreep([TOUGH,TOUGH,TOUGH,TOUGH,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK,RANGED_ATTACK], defenderName, {memory: {role: 'ranger', roleForQuota: 'ranger', homeRoom: 'E32N28', attackRoom: invaderNotices[i].roomTarget}})
+              }
+            }
+          } else if ((fillers.length < 2 || harvesters.length < 2) && room.energyAvailable <= 1000 && room.energyCapacityAvailable >= 1000) {
+						if (fillers.length <= 1 && fillers.length < fillerTarget) {
+							newName = colonyName + '_F' + creepRoleCounts.filler;
+              while (readySpawn.spawnCreep(availableVariants.filler.body, newName, { memory: { role: 'filler', roleForQuota: 'filler', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.filler++;
+                newName = colonyName + '_F' + creepRoleCounts.filler;
+              }
+						}
+						if (harvesters.length == 0 && harvesters.length < harvesterTarget) {
+							if (room.memory.settings.flags.dropHarvestingEnabled) {
+								newName = colonyName + '_H' + creepRoleCounts.harvester;
+								while (readySpawn.spawnCreep(availableVariants.dHarvester.body, newName, {
+									 memory: { role: 'harvester', roleForQuota: 'harvester', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+									creepRoleCounts.harvester++;
+									newName = colonyName + '_H' + creepRoleCounts.harvester;
+								}
+							} else {
+								newName = colonyName + '_H' + creepRoleCounts.harvester;
+								while (readySpawn.spawnCreep(availableVariants.harvester.body, newName, {
+										memory: { role: 'harvester', roleForQuota: 'harvester', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+									creepRoleCounts.harvester++;
+									newName = colonyName + '_H' + creepRoleCounts.harvester;
+								}
+							}
+						}
+					} else {
             if ((harvesters.length < harvesterTarget) || (harvesters.length <= harvesterTarget && harvesterDying && harvesterTarget !== 0)) {
-              newName = colonyName + '_H' + harvesterCount;
-              while (readySpawn.spawnCreep(availableVariants.harvester.body, newName, { memory: { role: 'harvester', roleForQuota: 'harvester', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                harvesterCount++;
-                newName = colonyName + '_H' + harvesterCount;
-              }
-            } else if ((fillers.length < fillerTarget) || (fillers.length <= fillerTarget && fillerDying && fillerTarget !== 0)) {
-              newName = colonyName + '_F' + fillerCount;
-              let max = 800;
-              if (room.energyCapacityAvailable < 800) max = 500;
-              else if (room.energyCapacityAvailable < 300) max = 300;
-              while (readySpawn.spawnCreep(readySpawn.determineBodyparts('filler', max), newName, { memory: { role: 'filler', roleForQuota: 'filler', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                fillerCount++;
-                newName = colonyName + '_F' + fillerCount;
-              }
-            } else {
-              //$ REBOOTERS/FILLERS/HARVESTERS are at quota, move on to the rest:
-              if ((runners.length < runnerTarget) || (runners.length <= runnerTarget && runnerDying && runnerTarget !== 0)) {
-                newName = colonyName + '_Rn' + runnerCount;
-                if (room.controller.level >= 4 && room.storage) {
-                  while (readySpawn.spawnCreep(readySpawn.determineBodyparts('runner', room.energyCapacityAvailable), newName, { memory: { role: 'runner', roleForQuota: 'runner', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                    runnerCount++;
-                    newName = colonyName + '_Rn' + runnerCount;
-                  }
-                } else {
-                  while (readySpawn.spawnCreep(availableVariants.runner.body, newName, { memory: { role: 'runner', roleForQuota: 'runner', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                    runnerCount++;
-                    newName = colonyName + '_Rn' + runnerCount;
-                  }
-                }
-              } else if (room.storage && cranes.length < craneTarget) {
-                newName = colonyName + '_Cn' + craneCount;
-                while (readySpawn.spawnCreep(availableVariants.crane.body, newName, { memory: { role: 'crane', roleForQuota: 'crane', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  craneCount++;
-                  newName = colonyName + '_Cn' + craneCount;
-                }
-              } else if ((reservers.length < reserverTarget) || (reservers.length <= reserverTarget && reserverDying && reserverTarget !== 0)) {
-                newName = colonyName + '_Rv' + reserverCount;
-                while (readySpawn.spawnCreep(availableVariants.reserver.body, newName, { memory: { role: 'reserver', roleForQuota: 'reserver', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  reserverCount++;
-                  newName = colonyName + '_Rv' + reserverCount;
-                }
-              } else if ((remoteHarvesters.length < remoteHarvesterTarget) || (remoteHarvesters.length <= remoteHarvesterTarget && remoteHarvesterDying && remoteHarvesterTarget !== 0)) {
-                newName = colonyName + '_RH' + remoteHarvesterCount;
-                while (readySpawn.spawnCreep([CARRY, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK], newName, { memory: { role: 'remoteharvester', roleForQuota: 'remoteharvester', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  remoteHarvesterCount++;
-                  newName = colonyName + '_RH' + remoteHarvesterCount;
-                }
-              } else if (sites.length > 0 && builders.length < builderTarget) {
-                newName = colonyName + '_B' + builderCount;
-                while (readySpawn.spawnCreep(availableVariants.builder.body, newName, { memory: { role: 'builder', roleForQuota: 'builder', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  builderCount++;
-                  newName = colonyName + '_B' + builderCount;
-                }
-              } else if (upgraders.length < upgraderTarget) {
-                newName = colonyName + '_U' + upgraderCount;
-                while (readySpawn.spawnCreep(availableVariants.upgrader.body, newName, { memory: { role: 'upgrader', roleForQuota: 'upgrader', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  upgraderCount++;
-                  newName = colonyName + '_U' + upgraderCount;
-                }
-              } else if (repairers.length < repairerTarget) {
-                newName = colonyName + '_Rp' + repairerCount;
-                while (readySpawn.spawnCreep(availableVariants.repairer.body, newName, { memory: { role: 'repairer', roleForQuota: 'repairer', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  repairerCount++;
-                  newName = colonyName + '_Rp' + repairerCount
-                }
-              } else if (miners.length < minerTarget && rMem.objects.extractor) {
-                newName = colonyName + '_M' + minerCount;
-                while (readySpawn.spawnCreep([WORK, WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE], newName, { memory: { role: 'miner', roleForQuota: 'miner', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  minerCount++;
-                  newName = colonyName + '_M' + minerCount;
-                }
-              } else if (scientists.length < scientistTarget && rMem.objects.labs) {
-                newName = colonyName + '_S' + scientistCount;
-                while (readySpawn.spawnCreep([MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY], newName, { memory: { role: 'scientist', roleForQuota: 'scientist', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  scientistCount++;
-                  newName = colonyName + '_S' + scientistCount;
-                }
-              } else if (remoteSites.length > 0 && remoteBuilders.length < remoteBuilderTarget) {
-                newName = colonyName + '_RB' + remoteBuilderCount;
-                while (readySpawn.spawnCreep(availableVariants.builder.body, newName, { memory: { role: 'remotebuilder', roleForQuota: 'remotebuilder', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  remoteBuilderCount++;
-                  newName = colonyName + '_RB' + remoteBuilderCount;
-                }
-              } else if ((remoteGuards.length < remoteGuardTarget) || (remoteGuards.length <= remoteGuardTarget && remoteGuardDying && remoteGuardTarget !== 0)) {
-                newName = colonyName + '_RG' + remoteGuardCount;
-                while (readySpawn.spawnCreep(availableVariants.remoteGuard.body, newName, { memory: { role: 'remoteguard', roleForQuota: 'remoteguard', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  remoteGuardCount++;
-                  newName = colonyName + '_RG' + remoteGuardCount;
-                }
-              } else if (remoteLogisticians.length < remoteLogisticianTarget) {
-                newName = colonyName + '_RL' + remoteLogisticianCount;
-                while (readySpawn.spawnCreep(availableVariants.remoteLogi.body, newName, { memory: { role: 'remotelogistician', roleForQuota: 'remotelogistician', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                  remoteLogisticianCount++;
-                  newName = colonyName + '_RL' + remoteLogisticianCount;
+              if (room.memory.settings.flags.dropHarvestingEnabled) {
+                newName = colonyName + '_H' + creepRoleCounts.harvester;
+                while (readySpawn.spawnCreep(availableVariants.dHarvester.body, newName, {
+                  memory: { role: 'harvester', roleForQuota: 'harvester', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                  creepRoleCounts.harvester++;
+                  newName = colonyName + '_H' + creepRoleCounts.harvester;
                 }
               } else {
-                //$ RESERVERS/REMOTE RUNNERS/HARVESTERS/BUILDERS/GUARDS are at quota, move on to defensive creeps:
-                if (rangers.length < rangerTarget) {
-                  newName = colonyName + '_Rng' + rangerCount;
-                  while (readySpawn.spawnCreep(availableVariants.ranger.body, newName, { memory: { role: 'ranger', roleForQuota: 'ranger', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                    rangerCount++;
-                    newName = colonyName + '_Rng' + rangerCount;
-                  }
-                } else if (warriors.length < warriorTarget) {
-                  newName = colonyName + '_War' + warriorCount;
-                  while (readySpawn.spawnCreep(availableVariants.warrior.body, newName, { memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                    warriorCount++;
-                    newName = colonyName + '_War' + warriorCount;
-                  }
-                } else if (healers.length < healerTarget) {
-                  newName = colonyName + '_Hlr' + healerCount;
-                  while (readySpawn.spawnCreep(availableVariants.healer.body, newName, { memory: { role: 'healer', roleForQuota: 'healer', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                    healerCount++;
-                    newName = colonyName + '_Hlr' + healerCount;
-                  }
-                } else if (scouts.length < scoutTarget) {
-                  newName = colonyName + '_Sct' + scoutCount;
-                  while (readySpawn.spawnCreep([MOVE, MOVE, MOVE, MOVE, MOVE], newName, { memory: { role: 'scout', roleForQuota: 'scout', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
-                    scoutCount++;
-                    newName = colonyName + '_Sct' + scoutCount;
-                  }
+                newName = colonyName + '_H' + creepRoleCounts.harvester;
+                while (readySpawn.spawnCreep(availableVariants.harvester.body, newName, {
+                  memory: { role: 'harvester', roleForQuota: 'harvester', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                  creepRoleCounts.harvester++;
+                  newName = colonyName + '_H' + creepRoleCounts.harvester;
                 }
               }
+            } else if ((fillers.length < fillerTarget) || (fillers.length <= fillerTarget && fillerDying && fillerTarget !== 0)) {
+              let max = 1000;
+              if (room.energyAvailable < max) max = room.energyAvailable;
+              newName = colonyName + '_F' + creepRoleCounts.filler;
+              while (readySpawn.spawnCreep(readySpawn.determineBodyparts('filler', max), newName, {
+                memory: { role: 'filler', roleForQuota: 'filler', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.filler++;
+                newName = colonyName + '_F' + creepRoleCounts.filler;
+              }
+            } else if (room.storage && cranes.length < craneTarget) {
+                log(readySpawn.name + ': Crane');
+                newName = colonyName + '_Cn' + creepRoleCounts.crane;
+                while (readySpawn.spawnCreep(availableVariants.crane.body, newName, {
+                  memory: { role: 'crane', roleForQuota: 'crane', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                  creepRoleCounts.crane++;
+                  newName = colonyName + '_Cn' + creepRoleCounts.crane;
+                }
+            } else if (!readySpawn.spawning && ((runners.length < runnerTarget) || (runners.length <= runnerTarget && runnerDying && runnerTarget !== 0))) {
+                newName = colonyName + '_Rn' + creepRoleCounts.runner;
+                if (numCreeps >= 5 && room.storage) {
+                  while (readySpawn.spawnCreep(readySpawn.determineBodyparts('runner', room.energyCapacityAvailable), newName, {
+                    memory: { role: 'runner', roleForQuota: 'runner', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                    creepRoleCounts.runner++;
+                    newName = colonyName + '_Rn' + creepRoleCounts.runner;
+                  }
+                } else {
+                  while (readySpawn.spawnCreep(availableVariants.runner.body, newName, {
+                    memory: { role: 'runner', roleForQuota: 'runner', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                    creepRoleCounts.runner++;
+                    newName = colonyName + '_Rn' + creepRoleCounts.runner;
+                  }
+                }
+            } else if ((remoteHarvesters.length < remoteHarvesterTarget) || (remoteHarvesters.length <= remoteHarvesterTarget && remoteHarvesterDying && remoteHarvesterTarget !== 0)) {
+                log(readySpawn.name + ': Remote Harvester');
+                newName = colonyName + '_RH' + creepRoleCounts.remoteHarvester;
+                while (readySpawn.spawnCreep([CARRY, MOVE, MOVE, MOVE, WORK, WORK, WORK, WORK, WORK], newName, {
+                  memory: { role: 'remoteharvester', roleForQuota: 'remoteharvester', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                  creepRoleCounts.remoteHarvester++;
+                  newName = colonyName + '_RH' + creepRoleCounts.remoteHarvester;
+                }
+            } else if ((reservers.length < reserverTarget) || (reservers.length <= reserverTarget && reserverDying && reserverTarget !== 0)) {
+              log(readySpawn.name + ': Reserver');
+              newName = colonyName + '_Rv' + creepRoleCounts.reserver;
+              while (readySpawn.spawnCreep(availableVariants.reserver.body, newName, {
+                memory: { role: 'reserver', roleForQuota: 'reserver', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.reserver++;
+                newName = colonyName + '_Rv' + creepRoleCounts.reserver;
+              }
+            } else if ((!room.storage && sites.length > 0 && builders.length < builderTarget) || (room.storage && room.storage.store.getUsedCapacity(RESOURCE_ENERGY) >= rMem.settings.upgraderMinEnergy && sites.length > 0 && builders.length < builderTarget)) {
+                log(readySpawn.name + ': Builder');
+                newName = colonyName + '_B' + creepRoleCounts.builder;
+                while (readySpawn.spawnCreep(availableVariants.builder.body, newName, {
+                  memory: { role: 'builder', roleForQuota: 'builder', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                  creepRoleCounts.builder++;
+                  newName = colonyName + '_B' + creepRoleCounts.builder;
+                }
+            } else if ((!room.storage && upgraders.length < upgraderTarget) || (room.storage && room.storage.store.getUsedCapacity(RESOURCE_ENERGY) >= rMem.settings.upgraderMinEnergy && upgraders.length < upgraderTarget)) {
+                log(readySpawn.name + ': Upgrader');
+                newName = colonyName + '_U' + creepRoleCounts.upgrader;
+                while (readySpawn.spawnCreep(availableVariants.upgrader.body, newName, {
+                  memory: { role: 'upgrader', roleForQuota: 'upgrader', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                  creepRoleCounts.upgrader++;
+                  newName = colonyName + '_U' + creepRoleCounts.upgrader;
+                }
+            } else if (repairers.length < repairerTarget) {
+                log(readySpawn.name + ': Repairer');
+                newName = colonyName + '_Rp' + creepRoleCounts.repairer;
+                while (readySpawn.spawnCreep(availableVariants.repairer.body, newName, {
+                  memory: { role: 'repairer', roleForQuota: 'repairer', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                  creepRoleCounts.repairer++;
+                  newName = colonyName + '_Rp' + creepRoleCounts.repairer;
+                }
+            } else if (miners.length < minerTarget && rMem.objects.extractor) {
+              log(readySpawn.name + ': Miner');
+              newName = colonyName + '_M' + creepRoleCounts.miner;
+              while (readySpawn.spawnCreep([WORK, WORK, WORK, WORK, WORK, WORK, CARRY, MOVE, MOVE, MOVE], newName, {
+                memory: { role: 'miner', roleForQuota: 'miner', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.miner++;
+                newName = colonyName + '_M' + creepRoleCounts.miner;
+              }
+            } else if (scientists.length < scientistTarget && rMem.objects.labs) {
+              log(readySpawn.name + ': Scientist');
+              newName = colonyName + '_S' + creepRoleCounts.scientist;
+              while (readySpawn.spawnCreep([MOVE, MOVE, MOVE, CARRY, CARRY, CARRY, CARRY, CARRY], newName, {
+                memory: { role: 'scientist', roleForQuota: 'scientist', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.scientist++;
+                newName = colonyName + '_S' + creepRoleCounts.scientist;
+              }
+            } else if (remoteSites.length > 0 && remoteBuilders.length < remoteBuilderTarget) {
+              log(readySpawn.name + ': Remote Builder');
+              newName = colonyName + '_RB' + creepRoleCounts.remoteBuilder;
+              while (readySpawn.spawnCreep(availableVariants.builder.body, newName, {
+                memory: { role: 'remotebuilder', roleForQuota: 'remotebuilder', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.remoteBuilder++;
+                newName = colonyName + '_RB' + creepRoleCounts.remoteBuilder;
+              }
+            } else if ((remoteGuards.length < remoteGuardTarget) || (remoteGuards.length <= remoteGuardTarget && remoteGuardDying && remoteGuardTarget !== 0)) {
+              log(readySpawn.name + ': Remote Guard');
+              newName = colonyName + '_RG' + creepRoleCounts.remoteGuard;
+              while (readySpawn.spawnCreep(availableVariants.remoteGuard.body, newName, {
+                memory: { role: 'remoteguard', roleForQuota: 'remoteguard', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.remoteGuard++;
+                newName = colonyName + '_RG' + creepRoleCounts.remoteGuard;
+              }
+            } else if (remoteLogisticians.length < remoteLogisticianTarget) {
+              log(readySpawn.name + ': Remote Logistician');
+              newName = colonyName + '_RL' + creepRoleCounts.remoteLogistician;
+              while (readySpawn.spawnCreep(availableVariants.remoteLogi.body, newName, {
+                memory: { role: 'remotelogistician', roleForQuota: 'remotelogistician', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.remoteLogistician++;
+                newName = colonyName + '_RL' + creepRoleCounts.remoteLogistician;
+              }
+            } else if (rangers.length < rangerTarget) {
+              log(readySpawn.name + ': Ranger');
+              newName = colonyName + '_Rng' + creepRoleCounts.ranger;
+              while (readySpawn.spawnCreep(availableVariants.ranger.body, newName, {
+                memory: { role: 'ranger', roleForQuota: 'ranger', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.ranger++;
+                newName = colonyName + '_Rng' + creepRoleCounts.ranger;
+              }
+            } else if (warriors.length < warriorTarget) {
+              log(readySpawn.name + ': Warrior');
+              newName = colonyName + '_War' + creepRoleCounts.warrior;
+              while (readySpawn.spawnCreep(availableVariants.warrior.body, newName, {
+                memory: { role: 'warrior', roleForQuota: 'warrior', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.warrior++;
+                newName = colonyName + '_War' + creepRoleCounts.warrior;
+              }
+            } else if (healers.length < healerTarget) {
+              log(readySpawn.name + ': Healer');
+              newName = colonyName + '_Hlr' + creepRoleCounts.healer;
+              while (readySpawn.spawnCreep(availableVariants.healer.body, newName, {
+                memory: { role: 'healer', roleForQuota: 'healer', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.healer++;
+                newName = colonyName + '_Hlr' + creepRoleCounts.healer;
+              }
+            } else if (scouts.length < scoutTarget) {
+              log(readySpawn.name + ': Scout');
+              newName = colonyName + '_Sct' + creepRoleCounts.scout;
+              while (readySpawn.spawnCreep([MOVE], newName, {
+                memory: { role: 'scout', roleForQuota: 'scout', homeRoom: roomName } }) == ERR_NAME_EXISTS) {
+                creepRoleCounts.scout++;
+                newName = colonyName + '_Sct' + creepRoleCounts.scout;
+              }
             }
-          }
-        }
-        let  makeWaitHarvester = 0;
-        let  makeWaitHauler = 0;
-        let  makeWaitBuilder = 0;
-        let  makeWaitClaimer = 0;
-
-        if (rMem.data.claimRooms !== undefined) {
-          const rooms = Object.keys(rMem.data.claimRooms) as RoomName[];
-          if (makeWaitHarvester !== 100) makeWaitHarvester = 0;
-          if (makeWaitHauler !== 100) makeWaitHauler = 0;
-          if (makeWaitClaimer !== 100) makeWaitClaimer = 0;
-          if (makeWaitBuilder !== 100) makeWaitBuilder = 0;
-
-          for (let i = 0; i < rooms.length; i++) {
-            if (tickCount % makeWaitClaimer == 0 && rMem.data.claimRooms[rooms[i]].hasBeenClaimed === false && rMem.data.claimRooms[rooms[i]].claimerSpawned === false && !readySpawn.spawning) {
-              const creeps = Object.entries(Memory.creeps);
-              const claimers = creeps.filter((creep) => creep[1].memory.role === 'claimer');
-              console.log(claimers);
-              const claimerSpawned = readySpawn.spawnClaimer(rMem.data.claimRooms[rooms[i]].roomName, 'Claimer' + i + 1, true);
-              if (claimerSpawned === 'OK')
-                rMem.data.claimRooms[rooms[i]].claimerSpawned = true;
-              else if (claimerSpawned === 'ERR_NOT_ENOUGH_RESOURCES')
-                makeWaitClaimer = 100;
-            } else if (tickCount % makeWaitHarvester == 0 && rMem.data.claimRooms[rooms[i]].neededHarvesters > 0 && !readySpawn.spawning) {
-              const harvesterSpawned = readySpawn.spawnNewClaimHarvester(rMem.data.claimRooms[rooms[i]].roomName, 'NewClaimHarvester' + i);
-              if (harvesterSpawned === 'OK')
-                  rMem.data.claimRooms[rooms[i]].neededHarvesters -= 1;
-              else if (harvesterSpawned === 'ERR_NOT_ENOUGH_RESOURCES')
-                makeWaitHarvester = 100;
-            } else if (tickCount % makeWaitBuilder == 0 && rMem.data.claimRooms[rooms[i]].neededBuilders > 0 && !readySpawn.spawning) {
-              const builderSpawned = readySpawn.spawnNewClaimBuilder(rMem.data.claimRooms[rooms[i]].roomName, 'NewClaimBuilder' + i);
-              if (builderSpawned === 'OK')
-                rMem.data.claimRooms[rooms[i]].neededBuilders -= 1;
-              else if (builderSpawned === 'ERR_NOT_ENOUGH_RESOURCES')
-                makeWaitBuilder = 100;
-            } else if (tickCount % makeWaitHauler == 0 && rMem.data.claimRooms[rooms[i]].energyRemaining > 0) {
-              const haulerSpawned = readySpawn.spawnNewClaimHauler(rMem.data.claimRooms[rooms[i]].roomName, 'NewClaimHauler');
-              if (haulerSpawned === 'OK')
-                break;
-              else if (haulerSpawned === 'ERR_NOT_ENOUGH_RESOURCES')
-                makeWaitHauler = 100;
-            }
-          }
+            // ! END OF PRIMARY SPAWN CHECKING
+					}
         }
 
         //* Displays Energy Available / Energy Capacity above Spawn Location
@@ -2178,7 +2145,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
           });
         //* BOTTOM ROW FLAGS
         room.visual.text(
-            'RDP('  + rmFlgs.runnersDoPiles      +
+            'RPE('  + rmFlgs.runnersPickupEnergy  +
           ')   RB('  + rmFlgs.repairBasics        +
           ')   RR('  + rmFlgs.repairRamparts      +
           ')    RW(' + rmFlgs.repairWalls         +
@@ -2222,35 +2189,44 @@ export const loop = ErrorMapper.wrapLoop(() => {
         })
       }
 
+
       // #endregion *******************************************************************************************************************
 
-     // ! END OF (ROOMS CLAIMED BY BOT)
-    }
+
+    } // ! END OF (ROOMS CLAIMED BY BOT)
   }); // ! END OF (FOR EACH ROOM BOT HAS VISIBILITY)
 
   //$ >##########################################################################################################################< $\\
   //$> ############################################# ROLE EXECUTION SWITCH CASE ################################################# <$\\
   //$ >##########################################################################################################################< $\\
 
-  for(let name in Game.creeps) {
+  //: EXECUTE CREEP ACTIONS BY ROLE EACH TICK
+	for(let name in Game.creeps) {
     const creep = Game.creeps[name];
 
     switch (creep.memory.role) {
 
+      case 'larva':
+        roleLarva.run(creep);
+        break;
       //* LOCAL COLONY ROLES
       case 'harvester':
-        roleHarvester .run(creep);
+      	roleHarvester .run(creep);
+        break;
+      case 'collector':
+       roleCollector.run (creep);
         break;
       case 'filler':
         roleFiller .run(creep);
         break;
       case 'runner':
-        roleRunner    .run(creep);
+       roleRunner    .run(creep);
         break;
       case 'builder':
         roleBuilder   .run(creep);
         break;
       case 'filler':
+
         roleFiller    .run(creep);
         break;
       case 'upgrader':
@@ -2277,7 +2253,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
         roleRemoteHarvester   .run(creep);
         break;
       case 'remotebuilder':
-        roleRemoteBuilder     .run(creep);
+      //  roleRemoteBuilder     .run(creep);
         break;
       case 'remoteguard':
         roleRemoteGuard       .run(creep);
@@ -2313,10 +2289,128 @@ export const loop = ErrorMapper.wrapLoop(() => {
       case 'invader':
         roleInvader .run(creep);
         break;
+			case 'upgraderonly':
+				roleUpgraderOnly.run(creep);
+				break;
     }
   }
+
   //$ >########################################## END OF ROLE EXECUTION SWITCH CASE ##############################################< $\\
   tickCount++;
 }); // ! END OF MAIN LOOP
+
+/*
+const colonySpawnerDaemon = function(room: Room): any {
+
+	const colIndex:   number           = Memory.colonies.colonyList.indexOf(room.name);
+	const colonyNum:  number           = colIndex + 1;
+	const colonyName: string           = 'Col' + colonyNum;
+	const roomLvl: 		number 				 	 = room.controller.level;
+	const roomName: 	string 				   = room.name;
+	const roomSpawns: StructureSpawn[] = room.find(FIND_MY_STRUCTURES, { filter: { structureType: STRUCTURE_SPAWN}});
+	let 	freeSpawn: 	StructureSpawn;
+
+	const nameList: {[key: string]: string} = {
+		harvester: "_H",
+		filler: "_F",
+		collector: "_C",
+		upgrader: "_U",
+		builder: "_B",
+		repairer: "_Rp",
+		runner: "_Rn",
+		rebooter: "_Rb",
+		reserver: "_Rv",
+		ranger: "_Rng",
+		warrior: "_War",
+		healer: "_Hlr",
+		crane: "_Cn",
+		miner: "_M",
+		scientist: "_Sn",
+		scout: "_Sc",
+		remoteharvester: "_RH",
+		remotebuilder: "_RB",
+		remoteguard: "_RG",
+		remotelogistician: "_RL"
+	}
+
+	for (let i = 0; i < roomSpawns.length; i++) {
+		const curSpawn: StructureSpawn = roomSpawns[i];
+
+		if (curSpawn.spawning)
+			continue;
+		else {
+			freeSpawn = curSpawn;
+			break;
+		}
+	}
+
+	if (freeSpawn) {
+
+		const spawnGoals = room.memory.targets;
+		const spawnPriority: CreepRoles[] = spawnPriorityList[roomLvl];
+
+		const currentCreeps: {[key: string]: number} = {
+			harvester:         _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'harvester'         &&      creep.memory.homeRoom == roomName).length,
+			filler:         	 _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'filler'    	       &&      creep.memory.homeRoom == roomName).length,
+			collector:         _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'collector'  	     &&      creep.memory.homeRoom == roomName).length,
+			upgrader:          _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'upgrader'          &&      creep.memory.homeRoom == roomName).length,
+			builder:           _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'builder'           &&      creep.memory.homeRoom == roomName).length,
+			repairer:          _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'repairer'          &&      creep.memory.homeRoom == roomName).length,
+			runner:            _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'runner'            &&      creep.memory.homeRoom == roomName).length,
+			rebooter:          _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'rebooter'          &&      creep.memory.homeRoom == roomName).length,
+			reserver:          _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'reserver'          &&      creep.memory.homeRoom == roomName).length,
+			ranger:            _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'ranger'            &&      creep.memory.homeRoom == roomName).length,
+			warrior:           _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'warrior'           &&      creep.memory.homeRoom == roomName).length,
+			healer:            _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'healer'            &&      creep.memory.homeRoom == roomName).length,
+			crane:             _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'crane'             &&      creep.memory.homeRoom == roomName).length,
+			miner:             _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'miner'             &&      creep.memory.homeRoom == roomName).length,
+			scientist:         _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'scientist'         &&      creep.memory.homeRoom == roomName).length,
+			scout:             _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'scout'             &&      creep.memory.homeRoom == roomName).length,
+			remoteHarvester:   _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remoteharvester'   &&      creep.memory.homeRoom == roomName).length,
+			remoteBuilder:     _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remotebuilder'     &&      creep.memory.homeRoom == roomName).length,
+			remoteGuard:       _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remoteguard'       &&      creep.memory.homeRoom == roomName).length,
+			remoteLogistician: _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == 'remotelogistician' &&      creep.memory.homeRoom == roomName).length
+		}
+
+		for (let i = 0; i < spawnPriority.length; i++) {
+			const currentSpawn: CreepRoles = spawnPriority[i];
+			let spawnIteration = 1;
+			const creepsAlive = _.filter(Game.creeps, (creep) => creep.memory.roleForQuota == spawnPriority[i] && creep.memory.homeRoom == roomName).length;
+
+			if (creepsAlive < spawnGoals[currentSpawn]) {
+				let name = colonyName + nameList[currentSpawn] + spawnIteration;
+				const result = freeSpawn.spawnCreep(availableVariants[currentSpawn].body, name, { memory: { role: currentSpawn, roleForQuota: currentSpawn, homeRoom: room.name, rallyPoint: 'none'} });
+				let logMsg: string;
+
+				switch (result) {
+					case OK:
+						logMsg += '\n... SUCCESS! RESULT CODE: ' + returnCode(result);
+						log(logMsg, room);
+						break;
+					case ERR_NAME_EXISTS:
+						logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+						log(logMsg, room);
+						spawnIteration++;
+						while (freeSpawn.spawnCreep(availableVariants[currentSpawn].body, name, { memory: { role: currentSpawn, roleForQuota: currentSpawn, homeRoom: room.name, rallyPoint: 'none'} }) == ERR_NAME_EXISTS) {
+							spawnIteration++;
+							name = colonyName + nameList[currentSpawn] + spawnIteration;
+						}
+						break;
+					case ERR_NOT_ENOUGH_RESOURCES:
+						logMsg += '\n... FAILED! RESULT CODE: ' + returnCode(result);
+						log(logMsg, room);
+
+						break;
+					default:
+						break;
+				}
+			}
+		}
+	}
+
+	else
+		return;
+}
+*/
 
 
