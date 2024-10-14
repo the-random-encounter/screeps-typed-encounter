@@ -242,6 +242,46 @@ Spawn.prototype.spawnClaimer = function (claimRoom: RoomName, name: string = 'Cl
   return returnCode(result);
 }
 
+Spawn.prototype.spawnUpgrader = function (creepRole: CreepRoles, maxEnergy?: number): ReturnCode {
+/*
+	const roomEnergy = this.room.energyCapacityAvailable;
+	const roomName = this.room.name;
+	let bodyArray: BodyPartConstant[] = [];
+
+	if (roomEnergy <= 300)
+		bodyArray = [ CARRY, CARRY, MOVE , WORK ];
+	else if (roomEnergy <= 350)
+  	bodyArray = [ CARRY, MOVE , MOVE , WORK , WORK ];
+  else if (roomEnergy <= 400)
+		bodyArray = [ CARRY, CARRY, MOVE , MOVE , WORK , WORK ];
+	else if (roomEnergy <= 500)
+  	bodyArray = [ CARRY, MOVE , WORK , WORK , WORK , WORK ];
+  else if (roomEnergy <= 550)
+		bodyArray = [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , WORK , WORK ];
+  else if (roomEnergy <= 700)
+		bodyArray = [ CARRY, MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK ];
+  else if (roomEnergy <= 900)
+		bodyArray = [ CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK  ];
+  else if (roomEnergy < 1400)
+		bodyArray = [ CARRY, CARRY, MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK , WORK ];
+	else if (roomEnergy >= 1400)
+		bodyArray = [ CARRY, CARRY, CARRY, MOVE , MOVE , MOVE , MOVE , MOVE , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK , WORK ];
+
+	let spawnAttemptCount = 1;
+	let newName = 'OnDemand_U' + spawnAttemptCount;
+
+	log(this.name + `: Spawning Upgrader with ${roomEnergy} energy capacity.`);
+
+	let result: ScreepsReturnCode = this.spawnCreep(bodyArray, newName, {memory: { role: 'upgrader', roleForQuota: 'upgrader', homeRoom: roomName } });
+
+	while (result == ERR_NAME_EXISTS) {
+		spawnAttemptCount++;
+		newName = 'OnDemand_U' + spawnAttemptCount;
+		result = this.spawnCreep(bodyArray, newName, {memory: { role: 'upgrader', roleForQuota: 'upgrader', homeRoom: roomName } });
+	}
+*/
+	return //result;
+}
 Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy?: number ) {
 
   if (!maxEnergy)
@@ -261,6 +301,9 @@ Spawn.prototype.determineBodyparts = function (creepRole: CreepRoles, maxEnergy?
 
 			break;
 		case 'builder':
+
+			break;
+		case 'collector':
 
 			break;
 		case 'filler': {

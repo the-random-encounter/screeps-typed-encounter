@@ -1,5 +1,6 @@
-import { validateFlagName } from './miscFunctions';
+import { validateFlagName, log, returnCode } from './miscFunctions';
 import { pathing } from '../roles/roles';
+import { result } from 'lodash';
 Creep.prototype.findEnergySource = function (): Source {
 
 	let sources: Array<Source> = this.room.find(FIND_SOURCES);
@@ -73,10 +74,23 @@ Creep.prototype.assignHarvestSource = function(noIncrement?: boolean): Source {
 		nextAssigned = 0;
 
 	// set assigned source to the next assigned room source
-	const assignedSource: Source = Game.getObjectById(roomSources[nextAssigned]);
+	let assignedSource: Source = Game.getObjectById(roomSources[nextAssigned]);
 
 	// set creep memory to match
-	cMem.source = assignedSource.id;
+  if (assignedSource)
+	  cMem.source = assignedSource.id;
+  else {
+    if (role == 'harvester') {
+      const sources = Game.rooms[cMem.homeRoom].memory.objects.sources;
+      cMem.source = sources[nextAssigned];
+    }
+    else if (role == 'remoteharvester') {
+      const sources = Game.rooms[cMem.homeRoom].memory.outposts.aggregateSourceList;
+      cMem.source = sources[nextAssigned];
+    }
+    assignedSource = Game.getObjectById(cMem.source);
+  }
+
 
 	if (role == 'harvester') home.objects.lastAssigned++;
 	else if (role == 'remoteharvester') home.outposts.aggLastAssigned++;
@@ -460,6 +474,10 @@ Creep.prototype.assignLogisticalPair = function(): boolean {
       this.memory.cargo = assignedPair.resource;
       this.memory.pathLength = assignedPair.distance;
       this.memory.locality = assignedPair.locality;
+			if (assignedPair.descriptor === 'storage to upgrader')
+				this.memory.limiter = true;
+			else
+				this.memory.limiter = false;
 
       console.log(this.room.link() + 'Assigned pair (PICKUP: ' + assignedPair.source + ') | (DROPOFF: ' + assignedPair.destination + ') | (CARGO: ' + assignedPair.resource + ') | (LOCALITY: ' + assignedPair.locality + ')');
       return true;
@@ -490,4 +508,127 @@ Creep.prototype.navigateWaypoints = function (waypoints: string | string[]): voi
 Creep.prototype.targetPile = function (pileID: Id<Resource>): void {
   this.memory.targetPile = pileID;
   return;
+}
+
+Creep.prototype.advGet = function (target: Source | Id<Source> | Mineral | Id<Mineral> | Deposit | Id<Deposit> | AnyStoreStructure | Resource | Tombstone | Ruin | Id<AnyStoreStructure> | Id<Resource> | Id<Tombstone> | Id<Ruin>): ScreepsReturnCode {
+
+	if (typeof target === 'string') {
+		target = Game.getObjectById(target);
+
+		if (!target) return ERR_INVALID_TARGET;
+	}
+
+	if (target instanceof Resource) {
+		if (this.pickup(target) === ERR_NOT_IN_RANGE) {
+			this.moveTo(target, pathing);
+		} else return OK;
+	} else if (target instanceof Source || target instanceof Mineral || target instanceof Deposit) {
+		if (this.harvest(target) === ERR_NOT_IN_RANGE) {
+	  	this.moveTo(target, pathing);
+		} else return OK;
+	} else {
+    if (this.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+      this.moveTo(target, pathing);
+    } else if (this.withdraw(target, RESOURCE_ENERGY) === ERR_NOT_ENOUGH_RESOURCES) {
+      const targetResources = Object.keys(target.store) as ResourceConstant[];
+      if (this.withdraw(target, targetResources[0]) === ERR_NOT_IN_RANGE) {
+        this.moveTo(target, pathing);
+      } else return OK;
+    }
+  }
+}
+
+Creep.prototype.advGet = function (target: Source | Id<Source> | Mineral | Id<Mineral> | Deposit | Id<Deposit> | AnyStoreStructure | Resource | Tombstone | Ruin | Id<AnyStoreStructure> | Id<Resource> | Id<Tombstone> | Id<Ruin>, pathing?: MoveToOpts, resource?: ResourceConstant, canTravel?: boolean): ScreepsReturnCode {
+
+	if (canTravel === undefined)
+		canTravel = true;
+
+	if (typeof target === 'string') {
+		target = Game.getObjectById(target);
+
+		if (!target) return ERR_INVALID_TARGET;
+	}
+
+	if (!resource) {
+		if (target instanceof Structure || target instanceof Tombstone || target instanceof Ruin) {
+			const targetResources = Object.keys(target.store) as ResourceConstant[];
+			resource = targetResources[0];
+		} else if (target instanceof Resource) {
+			resource = target.resourceType;
+		} else {
+			return ERR_INVALID_ARGS;
+		}
+	}
+
+	if (target instanceof Resource) {
+		if (this.pickup(target) === ERR_NOT_IN_RANGE) {
+			if (canTravel)
+				this.moveTo(target, pathing);
+			else
+				return ERR_NOT_IN_RANGE;
+		} else return OK;
+	} else if (target instanceof Source || target instanceof Mineral || target instanceof Deposit) {
+		if (this.harvest(target) === ERR_NOT_IN_RANGE) {
+			if (canTravel)
+				this.moveTo(target, pathing);
+			else
+				return ERR_NOT_IN_RANGE;
+		} else return OK;
+	} else {
+		if (this.withdraw(target, resource) === ERR_NOT_IN_RANGE) {
+			if (canTravel)
+				this.moveTo(target, pathing);
+			else
+				return ERR_NOT_IN_RANGE;
+		} else return OK;
+	}
+}
+
+Creep.prototype.advGive = function(target: Creep | AnyStoreStructure | Id<AnyStoreStructure>, pathing?: MoveToOpts, resource?: ResourceConstant, canTravel?: boolean): ScreepsReturnCode {
+
+	if (canTravel === undefined)
+		canTravel = true;
+
+	if (typeof target === 'string') {
+		target = Game.getObjectById(target);
+
+		if (!target) return ERR_INVALID_TARGET;
+	}
+
+	if (!resource) {
+		const targetResources = Object.keys(this.store) as ResourceConstant[];
+		resource = targetResources[0];
+	} else {
+		return ERR_INVALID_ARGS;
+	}
+
+	if (this.transfer(target, resource) === ERR_NOT_IN_RANGE) {
+		if (canTravel)
+			this.moveTo(target, pathing);
+		else
+			return ERR_NOT_IN_RANGE;
+	} else return OK;
+}
+
+
+Creep.prototype.getBoost = function(): boolean {
+	const labs: StructureLab[] = this.room.find(FIND_MY_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LAB && i.store[RESOURCE_ENERGY] > 0 });
+
+	if (labs && labs.length > 0) {
+		const nearestLab: StructureLab = this.pos.findClosestByRange(labs);
+
+		while (!this.pos.isNearTo(nearestLab))
+			this.moveTo(nearestLab);
+
+		const result = nearestLab.boostCreep(this);
+
+		if (result === OK) {
+			log(`Successfully boosted this '${this.name}'.`, this.room);
+			return true;
+		}
+		else {
+			log(`Failed to boost this '${this.name}'. Error Code: ${returnCode(result)}`, this.room);
+			return false;
+		}
+	}
 }

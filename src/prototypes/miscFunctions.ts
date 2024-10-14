@@ -1,5 +1,7 @@
 "use strict";
 
+import { spawnVariants } from 'utils/constants';
+
 /**
  *  Used to determine how many seconds each server tick is lasting on average
  * @param tickSamples How many sample ticks to log before averaging out the time of each tick
@@ -211,7 +213,7 @@ export function visualRCProgress(controller: StructureController): void {
   else
     progressLastTick = 0;
 
-  if (!(progressLastTick == 0 && Memory.miscData.rooms[rmName].controllerPPTArray.length == 0))
+  if (!(progressLastTick == 0 && Memory.miscData.rooms[rmName].controllerPPTArray.length == 0) && progress !== 0)
     Memory.miscData.rooms[rmName].controllerPPTArray.push(progressLastTick);
 
   Memory.miscData.rooms[rmName].controllerProgress = progress;
@@ -332,7 +334,7 @@ export function calcLabReaction(baseReg1: MineralCompoundConstant | MineralConst
       outputChem = RESOURCE_ZYNTHIUM_OXIDE;
     else if (baseReg1 === RESOURCE_GHODIUM       || baseReg2 === RESOURCE_GHODIUM)
       outputChem = RESOURCE_GHODIUM_OXIDE;
-  } else if (baseReg1 === RESOURCE_HYDROGEN      || baseReg2 === RESOURCE_HYDROGEN) {
+  } else if (baseReg1 === RESOURCE_HYDROGEN      || baseReg2 === RESOURCE_HYDROGEN) {console.log();
     if (baseReg1 === RESOURCE_UTRIUM             || baseReg2 === RESOURCE_UTRIUM)
       outputChem = RESOURCE_UTRIUM_HYDRIDE;
     else if (baseReg1 === RESOURCE_KEANIUM       || baseReg2 === RESOURCE_KEANIUM)
@@ -822,4 +824,653 @@ export function log(logMsg: string | string[], room: Room | false = false): void
       console.log('[GENERAL]: ' + logMsg);
     return;
   }
+}
+
+export function splitRoomName(roomName: string): [string, number, string, number] {
+    const match = roomName.match(/([ENSW])(\d+)([ENSW])(\d+)/);
+    if (!match) {
+        throw new Error('Invalid room name format');
+    }
+
+    return [match[1], parseInt(match[2]), match[3], parseInt(match[4])];
+}
+
+export function roomExitsTo(roomName: string, direction: DirectionConstant | number | string): string {
+  const validated = validateRoomName(roomName);
+
+  if (!validated) {
+    log(`Room name failed validation test. Check Room Name and try again.`, false);
+    log(`Examples: (ExxSyy | WxxNyy) (E32N15 | E5S33 | W1S5 | W42N1)`, false);
+    return;
+  }
+  if (typeof direction === 'string')
+    direction.toLowerCase();
+
+  const splitName = splitRoomName(roomName);
+
+  let newRoomNumber: number;
+
+  switch (direction) {
+    case TOP:
+    case 'north':
+    case 1:
+      newRoomNumber = splitName[3] + 1;
+      if (newRoomNumber > 60) {
+        log(`Room number value would exceed hard limit of 60.`, false);
+        return;
+      }
+      if (splitName[2] === 'S' && splitName[3] === 0)
+        return splitName[0] + splitName[1] + 'N' + 0;
+      return splitName[0] + splitName[1] + splitName[2] + newRoomNumber;
+    case LEFT:
+    case 'west':
+    case 7:
+      newRoomNumber = splitName[1] - 1;
+      if (newRoomNumber > 60) {
+        log(`Room number value would exceed hard limit of 60.`, false);
+        return;
+      }
+      if (splitName[0] === 'E' && splitName[1] === 0)
+        return 'W' + 0 + splitName[2] + splitName[3];
+      return splitName[0] + newRoomNumber + splitName[2] + splitName[3];
+    case BOTTOM:
+    case 'south':
+    case 5:
+      newRoomNumber = splitName[3] - 1;
+      if (newRoomNumber > 60) {
+        log(`Room number value would exceed hard limit of 60.`, false);
+        return;
+      }
+      if (splitName[2] === 'N' && splitName[3] === 0)
+        return splitName[0] + splitName[1] + 'S' + 0;
+      return splitName[0] + splitName[1] + splitName[2] + newRoomNumber;
+    case RIGHT:
+    case 'east':
+    case 3:
+      newRoomNumber = splitName[1] + 1;
+      if (newRoomNumber > 60) {
+        log(`Room number value would exceed hard limit of 60.`, false);
+        return;
+      }
+      if (splitName[0] === 'W' && splitName[1] === 0)
+        return 'E' + 0 + splitName[2] + splitName[3];
+      return splitName[0] + newRoomNumber + splitName[2] + splitName[3];
+    default:
+      log(`Error parsing room name '${roomName}'`, false);
+      return;
+  }
+}
+
+export function initGlobal(override: boolean = false): boolean {
+
+  if (Memory.initialized === undefined && Memory.initializedBackup === undefined || override === true) {
+
+    if (override === true)
+      log("Performing first-time initialization via override. Manual adjustment of values may be necessary.");
+
+    if (Memory.globalSettings) {
+
+      delete Memory.globalSettings;
+
+      Memory.globalSettings = {
+        consoleSpawnInterval: 25,
+        alertDisabled: true,
+        reusePathValue: 5,
+        ignoreCreeps: true,
+        creepSettings: {
+          builder: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          claimer: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          filler: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          crane: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          harvester: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          healer: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          invader: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          miner: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          provider: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          ranger: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          rebooter: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          remotebuilder: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          remoteguard: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          remoteharvester: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          remotelogistician: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          remoterunner: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          repairer: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          reserver: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          runner: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          scientist: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          scout: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          upgrader: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          },
+          warrior: {
+            reusePathValue: 3,
+            ignoreCreeps: true
+          }
+        }
+      };
+
+    if (Memory.miscData === undefined) {
+
+      Memory.miscData = {};
+
+      Memory.miscData = {
+      'firstColonyRoom': 'unknown',
+      'containerCounter':     0,
+      'outpostRoomCounter':   0,
+      'outpostSourceCounter': 0,
+      'outpostCounterRv':     0,
+      'outpostCounterRG':     0,
+      'rooms': {}
+      };
+    }
+
+    if (Memory.colonies === undefined) {
+
+      const colonies: Colonies = { colonyList: [], registry: {} };
+
+      Memory.colonies = {};
+      Memory.colonies = colonies;
+    }
+
+    if (Memory.goals === undefined) {
+      const goals = {
+        colonyCount: 1,
+        outpostCount: 0,
+        firstColonyRC: 1,
+        initSetup: false,
+        initRoom: false,
+        sourceBoxesBuilt: false,
+        rc2: false,
+        rc2Extensions: false,
+        rc3: false,
+        rc3Extensions: false,
+        rc3Tower: false,
+        rc4: false,
+        rc4Extensions: false,
+        futureGoals: false
+      }
+
+      Memory.goals = goals;
+    }
+
+    //if (typeof Memory.colonies === undefined) Memory.colonies = {};
+    //if (typeof Memory.colonies.colonyList === undefined) Memory.colonies.colonyList = [];
+
+    log("Initialized all global memory settings successfully, first-time colony setup is complete.");
+    return true;
+    }
+    else {
+      log("Memory value 'initialized' has value " + Memory.initialized + ", and the backup value has value " + Memory.initializedBackup + ". First time initialization is not advised. Pass parameter 'true' to force function execution.");
+      return false;
+    }
+  }
+}
+
+export function determineVariants(energyCap: number): {[key: string]: {body: BodyPartConstant[], cost: number}} {
+
+  let availableVariants:{[key: string]: {body: BodyPartConstant[], cost: number}} = {
+        harvester:  { body: [], cost: 0},
+        filler:     { body: [], cost: 0},
+        upgrader:   { body: [], cost: 0},
+        builder:    { body: [], cost: 0},
+        repairer:   { body: [], cost: 0},
+        runner:     { body: [], cost: 0},
+        warrior:    { body: [], cost: 0},
+        crane:      { body: [], cost: 0},
+        remoteGuard:{ body: [], cost: 0},
+        remoteLogi: { body: [], cost: 0},
+        reserver:   { body: [], cost: 0},
+        healer:     { body: [], cost: 0},
+        ranger:     { body: [], cost: 0},
+        beast:      { body: [], cost: 0},
+        pony:       { body: [], cost: 0},
+        beef:       { body: [], cost: 0},
+        dHarvester: { body: [], cost: 0}
+      }
+
+  if (energyCap >= 10000) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler800;
+    availableVariants.filler.cost         = 800;
+    availableVariants.upgrader.body       = spawnVariants.upgrader1400;
+    availableVariants.upgrader.cost       = 900;
+    availableVariants.builder.body        = spawnVariants.builder1100;
+    availableVariants.builder.cost        = 1100;
+    availableVariants.repairer.body       = spawnVariants.repairer1000;
+    availableVariants.repairer.cost       = 1000;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.warrior.body        = spawnVariants.warrior1800;
+    availableVariants.warrior.cost        = 1800;
+    availableVariants.ranger.body         = spawnVariants.ranger1800;
+    availableVariants.ranger.cost         = 1800;
+    availableVariants.healer.body         = spawnVariants.healer1800;
+    availableVariants.healer.cost         = 1800;
+    availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1500;
+    availableVariants.remoteLogi.cost     = 1500;
+    availableVariants.reserver.body       = spawnVariants.reserver1300;
+    availableVariants.reserver.cost       = 1300;
+  }
+  else if (energyCap >= 5300) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler800;
+    availableVariants.filler.cost         = 800;
+    availableVariants.upgrader.body       = spawnVariants.upgrader1400;
+    availableVariants.upgrader.cost       = 900;
+    availableVariants.builder.body        = spawnVariants.builder1100;
+    availableVariants.builder.cost        = 1100;
+    availableVariants.repairer.body       = spawnVariants.repairer1000;
+    availableVariants.repairer.cost       = 1000;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.warrior.body        = spawnVariants.warrior1800;
+    availableVariants.warrior.cost        = 1800;
+    availableVariants.ranger.body         = spawnVariants.ranger1800;
+    availableVariants.ranger.cost         = 1800;
+    availableVariants.healer.body         = spawnVariants.healer1800;
+    availableVariants.healer.cost         = 1800;
+    availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1500;
+    availableVariants.remoteLogi.cost     = 1500;
+    availableVariants.reserver.body       = spawnVariants.reserver1300;
+    availableVariants.reserver.cost       = 1300;
+  }
+  else if (energyCap >= 2300) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler800;
+    availableVariants.filler.cost         = 800;
+    availableVariants.upgrader.body       = spawnVariants.upgrader1400;
+    availableVariants.upgrader.cost       = 900;
+    availableVariants.builder.body        = spawnVariants.builder1100;
+    availableVariants.builder.cost        = 1100;
+    availableVariants.repairer.body       = spawnVariants.repairer1000;
+    availableVariants.repairer.cost       = 1000;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.warrior.body        = spawnVariants.warrior1800;
+    availableVariants.warrior.cost        = 1800;
+    availableVariants.ranger.body         = spawnVariants.ranger1800;
+    availableVariants.ranger.cost         = 1800;
+    availableVariants.healer.body         = spawnVariants.healer1800;
+    availableVariants.healer.cost         = 1800;
+    availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1500;
+    availableVariants.remoteLogi.cost     = 1500;
+    availableVariants.reserver.body       = spawnVariants.reserver1300;
+    availableVariants.reserver.cost       = 1300;
+  }
+  else if (energyCap >= 1800) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler800;
+    availableVariants.filler.cost         = 800;
+    availableVariants.upgrader.body       = spawnVariants.upgrader1400;
+    availableVariants.upgrader.cost       = 900;
+    availableVariants.builder.body        = spawnVariants.builder1100;
+    availableVariants.builder.cost        = 1100;
+    availableVariants.repairer.body       = spawnVariants.repairer1000;
+    availableVariants.repairer.cost       = 1000;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.warrior.body        = spawnVariants.warrior1800;
+    availableVariants.warrior.cost        = 1800;
+    availableVariants.ranger.body         = spawnVariants.ranger1800;
+    availableVariants.ranger.cost         = 1800;
+    availableVariants.healer.body         = spawnVariants.healer1800;
+    availableVariants.healer.cost         = 1800;
+    availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1500;
+    availableVariants.remoteLogi.cost     = 1500;
+    availableVariants.reserver.body       = spawnVariants.reserver1300;
+    availableVariants.reserver.cost       = 1300;
+  }  else if (energyCap >= 1400) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler800;
+    availableVariants.filler.cost         = 800;
+    availableVariants.upgrader.body       = spawnVariants.upgrader900;
+    availableVariants.upgrader.cost       = 900;
+    availableVariants.builder.body        = spawnVariants.builder1100;
+    availableVariants.builder.cost        = 1100;
+    availableVariants.repairer.body       = spawnVariants.repairer1000;
+    availableVariants.repairer.cost       = 1000;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.warrior.body        = spawnVariants.warrior1400;
+    availableVariants.warrior.cost        = 1400;
+    availableVariants.healer.body         = spawnVariants.healer1200;
+    availableVariants.healer.cost         = 1200;
+    availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1500;
+    availableVariants.remoteLogi.cost     = 1500;
+    availableVariants.reserver.body       = spawnVariants.reserver1300;
+    availableVariants.reserver.cost       = 1300;
+  } else if (energyCap >= 1300) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler800;
+    availableVariants.filler.cost         = 800;
+    availableVariants.upgrader.body       = spawnVariants.upgrader700;
+    availableVariants.upgrader.cost       = 700;
+    availableVariants.builder.body        = spawnVariants.builder1000;
+    availableVariants.builder.cost        = 1000;
+    availableVariants.repairer.body       = spawnVariants.repairer1000;
+    availableVariants.repairer.cost       = 1000;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.remoteLogi.body     = spawnVariants.remoteLogi1200;
+    availableVariants.remoteLogi.cost     = 1200;
+    availableVariants.reserver.body       = spawnVariants.reserver1300;
+    availableVariants.reserver.cost       = 1300;
+  } else if (energyCap >= 1250) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler500;
+    availableVariants.filler.cost         = 500;
+    availableVariants.upgrader.body       = spawnVariants.upgrader700;
+    availableVariants.upgrader.cost       = 700;
+    availableVariants.builder.body        = spawnVariants.builder800;
+    availableVariants.builder.cost        = 800;
+    availableVariants.repairer.body       = spawnVariants.repairer800;
+    availableVariants.repairer.cost       = 800;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.reserver.body       = spawnVariants.reserver650;
+    availableVariants.reserver.cost       = 650;
+  } else if (energyCap >= 1000) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler500;
+    availableVariants.filler.cost         = 500;
+    availableVariants.upgrader.body       = spawnVariants.upgrader700;
+    availableVariants.upgrader.cost       = 700;
+    availableVariants.builder.body        = spawnVariants.builder800;
+    availableVariants.builder.cost        = 800;
+    availableVariants.repairer.body       = spawnVariants.repairer800;
+    availableVariants.repairer.cost       = 800;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.reserver.body       = spawnVariants.reserver650;
+    availableVariants.reserver.cost       = 650;
+  } else if (energyCap >= 900) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester700;
+    availableVariants.harvester.cost      = 700;
+    availableVariants.filler.body         = spawnVariants.filler500;
+    availableVariants.filler.cost         = 500;
+    availableVariants.upgrader.body       = spawnVariants.upgrader800;
+    availableVariants.upgrader.cost       = 800;
+    availableVariants.builder.body        = spawnVariants.builder700;
+    availableVariants.builder.cost        = 700;
+    availableVariants.repairer.body       = spawnVariants.repairer600;
+    availableVariants.repairer.cost       = 600;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.reserver.body       = spawnVariants.reserver650;
+    availableVariants.reserver.cost       = 650;
+  } else if (energyCap >= 800) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester650;
+    availableVariants.dHarvester.cost     = 650
+    availableVariants.harvester.body      = spawnVariants.harvester600;
+    availableVariants.harvester.cost      = 600;
+    availableVariants.filler.body         = spawnVariants.filler500;
+    availableVariants.filler.cost         = 500;
+    availableVariants.upgrader.body       = spawnVariants.upgrader700;
+    availableVariants.upgrader.cost       = 700;
+    availableVariants.builder.body        = spawnVariants.builder600;
+    availableVariants.builder.cost        = 600;
+    availableVariants.repairer.body       = spawnVariants.repairer500;
+    availableVariants.repairer.cost       = 500;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+    availableVariants.reserver.body       = spawnVariants.reserver650;
+    availableVariants.reserver.cost       = 650;
+  } else if (energyCap >= 700) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester600;
+    availableVariants.dHarvester.cost     = 600
+    availableVariants.harvester.body      = spawnVariants.harvester550;
+    availableVariants.harvester.cost      = 550;
+    availableVariants.filler.body         = spawnVariants.filler500;
+    availableVariants.filler.cost         = 500;
+    availableVariants.upgrader.body       = spawnVariants.upgrader550;
+    availableVariants.upgrader.cost       = 550;
+    availableVariants.builder.body        = spawnVariants.builder600;
+    availableVariants.builder.cost        = 600;
+    availableVariants.repairer.body       = spawnVariants.repairer500;
+    availableVariants.repairer.cost       = 500;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+    availableVariants.remoteGuard.body    = spawnVariants.remoteGuard700;
+    availableVariants.remoteGuard.cost    = 700;
+  } else if (energyCap >= 600) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester550;
+    availableVariants.dHarvester.cost     = 550
+    availableVariants.harvester.body      = spawnVariants.harvester500;
+    availableVariants.harvester.cost      = 500;
+    availableVariants.filler.body         = spawnVariants.filler300;
+    availableVariants.filler.cost         = 300;
+    availableVariants.upgrader.body       = spawnVariants.upgrader550;
+    availableVariants.upgrader.cost       = 550;
+    availableVariants.builder.body        = spawnVariants.builder500;
+    availableVariants.builder.cost        = 500;
+    availableVariants.repairer.body       = spawnVariants.repairer500;
+    availableVariants.repairer.cost       = 500;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.warrior.body        = spawnVariants.warrior520;
+    availableVariants.warrior.cost        = 520;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+  } else if (energyCap >= 550) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester550;
+    availableVariants.dHarvester.cost     = 450
+    availableVariants.harvester.body      = spawnVariants.harvester450;
+    availableVariants.harvester.cost      = 450;
+    availableVariants.filler.body         = spawnVariants.filler300;
+    availableVariants.filler.cost         = 300;
+    availableVariants.upgrader.body       = spawnVariants.upgrader550;
+    availableVariants.upgrader.cost       = 550;
+    availableVariants.builder.body        = spawnVariants.builder500;
+    availableVariants.builder.cost        = 500;
+    availableVariants.repairer.body       = spawnVariants.repairer500;
+    availableVariants.repairer.cost       = 500;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.warrior.body        = spawnVariants.warrior520;
+    availableVariants.warrior.cost        = 520;
+    availableVariants.crane.body          = spawnVariants.crane500;
+    availableVariants.crane.cost          = 500;
+  } else if (energyCap >= 500) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester400;
+    availableVariants.dHarvester.cost     = 400
+    availableVariants.harvester.body      = spawnVariants.harvester400;
+    availableVariants.harvester.cost      = 400;
+    availableVariants.filler.body         = spawnVariants.filler300;
+    availableVariants.filler.cost         = 300;
+    availableVariants.upgrader.body       = spawnVariants.upgrader400;
+    availableVariants.upgrader.cost       = 400;
+    availableVariants.builder.body        = spawnVariants.builder350;
+    availableVariants.builder.cost        = 350;
+    availableVariants.repairer.body       = spawnVariants.repairer300;
+    availableVariants.repairer.cost       = 300;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane300;
+    availableVariants.crane.cost          = 300;
+  } else if (energyCap >= 400) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester350;
+    availableVariants.dHarvester.cost     = 350
+    availableVariants.harvester.body      = spawnVariants.harvester400;
+    availableVariants.harvester.cost      = 400;
+    availableVariants.filler.body         = spawnVariants.filler300;
+    availableVariants.filler.cost         = 300;
+    availableVariants.upgrader.body       = spawnVariants.upgrader400;
+    availableVariants.upgrader.cost       = 400;
+    availableVariants.builder.body        = spawnVariants.builder350;
+    availableVariants.builder.cost        = 350;
+    availableVariants.repairer.body       = spawnVariants.repairer300;
+    availableVariants.repairer.cost       = 300;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane300;
+    availableVariants.crane.cost          = 300;
+  } else if (energyCap >= 350) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester250;
+    availableVariants.dHarvester.cost     = 250
+    availableVariants.harvester.body      = spawnVariants.harvester300;
+    availableVariants.harvester.cost      = 300;
+    availableVariants.filler.body         = spawnVariants.filler200;
+    availableVariants.filler.cost         = 200;
+    availableVariants.upgrader.body       = spawnVariants.upgrader350;
+    availableVariants.upgrader.cost       = 350;
+    availableVariants.builder.body        = spawnVariants.builder350;
+    availableVariants.builder.cost        = 350;
+    availableVariants.repairer.body       = spawnVariants.repairer300;
+    availableVariants.repairer.cost       = 300;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane300;
+    availableVariants.crane.cost          = 300;
+  } else if (energyCap >= 300) {
+    availableVariants.dHarvester.body     = spawnVariants.dHarvester150;
+    availableVariants.dHarvester.cost     = 150
+    availableVariants.harvester.body      = spawnVariants.harvester200;
+    availableVariants.harvester.cost      = 200;
+    availableVariants.filler.body         = spawnVariants.filler200;
+    availableVariants.filler.cost         = 200;
+    availableVariants.upgrader.body       = spawnVariants.upgrader300;
+    availableVariants.upgrader.cost       = 300;
+    availableVariants.builder.body        = spawnVariants.builder300;
+    availableVariants.builder.cost        = 300;
+    availableVariants.repairer.body       = spawnVariants.repairer300;
+    availableVariants.repairer.cost       = 300;
+    availableVariants.runner.body         = spawnVariants.runner300;
+    availableVariants.runner.cost         = 300;
+    availableVariants.crane.body          = spawnVariants.crane300;
+    availableVariants.crane.cost          = 300;
+  }
+
+  return availableVariants;
 }

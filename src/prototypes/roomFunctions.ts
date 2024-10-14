@@ -1,4 +1,4 @@
-import { calcPath, validateRoomName, randomColor, createRoomFlag, log } from './miscFunctions';
+import { calcPath, validateRoomName, randomColor, createRoomFlag, log, roomExitsTo } from './miscFunctions';
 
 Room.prototype.RLP                        = function(): boolean { return this.registerLogisticalPairs(); }
 Room.prototype.clearPPT                   = function() { this.clearRCLCounter(); }
@@ -143,8 +143,15 @@ Room.prototype.cacheObjects               = function() {
       storageArray.push(containers[i].id);
     if (storageArray.length) {
       this.memory.objects.containers = storageArray;
+      let updateInfo = '';
+      if (this.memory.outpostOfRoom) {
+        const hostRoom = this.memory.outpostOfRoom;
+        this.memory.outposts.registry[hostRoom].containers = storageArray;
+        Memory.colonies.registry[hostRoom].outposts[this.name].containers = storageArray;
+        updateInfo = "\n>>> NOTICE: Room is an outpost of a main colony. Updated Colonies registry info and global room memory with new container IDs.";
+      }
       if (storageArray.length > 1)
-        log('Cached ' + storageArray.length + ' containers.', this);
+        log('Cached ' + storageArray.length + ' containers.' + updateInfo, this);
       else
         log('Cached 1 container.', this);
     }
@@ -371,7 +378,7 @@ Room.prototype.initRoom                   = function() {
   if (!this.memory.objects)
     this.memory.objects = {};
   if (!this.memory.settings)
-    this.memory.settings = { containerSettings: {}, labSettings: {}, repairSettings: {}, visualSettings: {}, flags: {} };
+    this.memory.settings = { containerSettings: {}, labSettings: {}, repairSettings: {}, visualSettings: {}, flags: {}, upgraderMinEnergy: 0 };
   if (!this.memory.paths)
     this.memory.paths = {};
   if (this.memory.objects.lastAssigned === undefined)
@@ -382,6 +389,8 @@ Room.prototype.initRoom                   = function() {
     this.memory.data.remoteLogistics = {};
   if (!this.memory.data.combatObjectives)
     this.memory.data.combatObjectives = {};
+	if (!this.memory.data.workOrders)
+		this.memory.data.workOrders = [];
 
   this.cacheObjects();
   this.initFlags();
@@ -389,6 +398,9 @@ Room.prototype.initRoom                   = function() {
 
   if (this.controller && this.controller.my)
     this.initTargets();
+
+  if (Memory.miscData.firstColonyRoom === 'unknown')
+    Memory.miscData.firstColonyRoom = this.name;
 }
 
 Room.prototype.initTargets                = function(targetArray: number[] | false = false) {
@@ -397,11 +409,11 @@ Room.prototype.initTargets                = function(targetArray: number[] | fal
     if (!this.memory.targets)
       this.memory.targets = {};
 
-    this.memory.targets.harvester = 2;
+    this.memory.targets.harvester = 6;
     this.memory.targets.filler = 2;
     this.memory.targets.runner = 0;
-    this.memory.targets.builder = 2;
-    this.memory.targets.upgrader = 1;
+    this.memory.targets.builder = 4;
+    this.memory.targets.upgrader = 4;
     this.memory.targets.repairer = 0;
     this.memory.targets.crane = 0;
     this.memory.targets.miner = 0;
@@ -455,13 +467,16 @@ Room.prototype.initFlags                  = function() {
     this.memory.settings.flags.craneUpgrades         = false;
 
   if (this.memory.settings.flags.repairRamparts       === undefined)
-    this.memory.settings.flags.repairRamparts         = false;
+    this.memory.settings.flags.repairRamparts         = true;
 
   if (this.memory.settings.flags.repairWalls         === undefined)
-    this.memory.settings.flags.repairWalls           = false;
+    this.memory.settings.flags.repairWalls           = true;
 
   if (this.memory.settings.flags.centralStorageLogic === undefined)
     this.memory.settings.flags.centralStorageLogic   = false;
+
+	if (this.memory.settings.flags.dropHarvestingEnabled === undefined)
+		this.memory.settings.flags.dropHarvestingEnabled = false;
 
   if (this.memory.settings.flags.runnersDoMinerals   === undefined)
     this.memory.settings.flags.runnersDoMinerals     = false;
@@ -472,17 +487,17 @@ Room.prototype.initFlags                  = function() {
   if (this.memory.settings.flags.towerRepairDefenses === undefined)
     this.memory.settings.flags.towerRepairDefenses   = false;
 
-  if (this.memory.settings.flags.runnersDoPiles      === undefined)
-    this.memory.settings.flags.runnersDoPiles        = false;
+  if (this.memory.settings.flags.runnersPickupEnergy  === undefined)
+    this.memory.settings.flags.runnersPickupEnergy    = false;
 
   if (this.memory.settings.flags.harvestersFixAdjacent === undefined)
-    this.memory.settings.flags.harvestersFixAdjacent = false;
+    this.memory.settings.flags.harvestersFixAdjacent  = false;
 
   if (this.memory.settings.flags.repairBasics         === undefined)
-    this.memory.settings.flags.repairBasics           = false;
+    this.memory.settings.flags.repairBasics           = true;
 
   if (this.memory.settings.flags.upgradersSeekEnergy  === undefined)
-    this.memory.settings.flags.upgradersSeekEnergy    = false;
+    this.memory.settings.flags.upgradersSeekEnergy    = true;
 
   if (this.memory.settings.flags.sortConSites         === undefined)
     this.memory.settings.flags.sortConSites           = false;
@@ -490,10 +505,9 @@ Room.prototype.initFlags                  = function() {
   if (this.memory.settings.flags.closestConSites      === undefined)
     this.memory.settings.flags.closestConSites        = false;
 
-  if (this.memory.settings.flags.displayTowerRanges   === undefined)
-    this.memory.settings.flags.displayTowerRanges     = false;
 
-  log('Room flags initialized: craneUpgrades(' + this.memory.settings.flags.craneUpgrades + ') centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersDoPiles(' + this.memory.settings.flags.runnersDoPiles + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')', this);
+
+  log('Room flags initialized: craneUpgrades(' + this.memory.settings.flags.craneUpgrades + ') centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') dropHarvestingEnabled(' + this.memory.settings.flags.dropHarvestingEnabled + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersPickupEnergy(' + this.memory.settings.flags.runnersPickupEnergy + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')', this);
   return;
 }
 
@@ -510,6 +524,7 @@ Room.prototype.setRoomFlags               = function(flags: boolean[]) {
   const flag9 = flags[8];
   const flag10 = flags[9];
   const flag11 = flags[10];
+	const flag12 = flags[11];
 
   if (flag1)  this.memory.settings.flags.craneUpgrades         = flag1;
 
@@ -525,7 +540,7 @@ Room.prototype.setRoomFlags               = function(flags: boolean[]) {
 
   if (flag7)  this.memory.settings.flags.towerRepairDefenses   = flag7;
 
-  if (flag8)  this.memory.settings.flags.runnersDoPiles        = flag8;
+  if (flag8)  this.memory.settings.flags.runnersPickupEnergy   = flag8;
 
   if (flag9)  this.memory.settings.flags.harvestersFixAdjacent = flag9;
 
@@ -533,13 +548,15 @@ Room.prototype.setRoomFlags               = function(flags: boolean[]) {
 
   if (flag11)  this.memory.settings.flags.upgradersSeekEnergy  = flag11;
 
-  log('Room flags set: centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersDoPiles(' + this.memory.settings.flags.runnersDoPiles + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ')', this);
+	if (flag12)	 this.memory.settings.flags.dropHarvestingEnabled = flag12;
+
+  log('Room flags set: centralStorageLogic(' + this.memory.settings.flags.centralStorageLogic + ') repairRamparts(' + this.memory.settings.flags.repairRamparts + ') repairWalls(' + this.memory.settings.flags.repairWalls + ') runnersDoMinerals(' + this.memory.settings.flags.runnersDoMinerals + ') towerRepairBasic(' + this.memory.settings.flags.towerRepairBasic + ') towerRepairDefenses(' + this.memory.settings.flags.towerRepairDefenses + ') runnersPickupEnergy(' + this.memory.settings.flags.runnersPickupEnergy + ') harvestersFixAdjacent(' + this.memory.settings.flags.harvestersFixAdjacent + ') repairBasics(' + this.memory.settings.flags.repairBasics + ') upgradersSeekEnergy(' + this.memory.settings.flags.upgradersSeekEnergy + ') dropHarvestingEnabled(' + this.memory.settings.flags.dropHarvestingEnabled + ')', this);
   return;
 }
 
 Room.prototype.initSettings               = function() {
 
-  if (!this.memory.settings)                                               this.memory.settings = { containerSettings: {}, labSettings: {}, repairSettings: {}, visualSettings: {}, flags: {} };
+  if (!this.memory.settings)                                               this.memory.settings = { containerSettings: {}, labSettings: {}, repairSettings: {}, visualSettings: {}, flags: {}, upgraderMinEnergy: 0 };
   if (!this.memory.data)                                                  this.memory.data = {};
   if (!this.memory.settings.flags)                                        this.memory.settings.flags = {};
   if (!this.memory.settings.repairSettings)                               this.memory.settings.repairSettings = {};
@@ -569,6 +586,8 @@ Room.prototype.initSettings               = function() {
     this.memory.settings.visualSettings.progressInfo.stroke = '#000000';
   if (!this.memory.settings.visualSettings.progressInfo.fontSize)
     this.memory.settings.visualSettings.progressInfo.fontSize = 0.6;
+	if (this.memory.settings.visualSettings.displayTowerRanges   === undefined)
+    this.memory.settings.visualSettings.displayTowerRanges     = false;
   if (!this.memory.settings.containerSettings.inboxes)                     this.memory.settings.containerSettings.inboxes = [];
   if (!this.memory.settings.containerSettings.outboxes)                    this.memory.settings.containerSettings.outboxes = [];
   if (this.memory.settings.containerSettings.lastInbox === undefined)      this.memory.settings.containerSettings.lastInbox = 0;
@@ -580,13 +599,62 @@ Room.prototype.initSettings               = function() {
   return;
 }
 
-Room.prototype.registerLogisticalPairs    = function (): boolean {
+Room.prototype.registerContainers					= function(): boolean {
+
+	const sources				 :  Source[] 	  						 = this.find(FIND_SOURCES);
+	const minerals    	 :  Mineral[] 							 = this.find(FIND_MINERALS);
+	const inboxArray		 :  StructureContainer[] 		 = this.controller.pos.findInRange(FIND_STRUCTURES, 4, { filter: { structureType: STRUCTURE_CONTAINER } });
+	const mineralBoxArray:  StructureContainer[] 		 = minerals[0].pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
+
+	let outboxIDs				 :  Id<StructureContainer>[] = [];
+	let boxReport = '############## REGISTERED CONTAINER REPORT ##############';
+	let boxesFound = false;
+
+	for (let i = 0; i < sources.length; i++) {
+    let sourceBox: Array<StructureContainer> = sources[i].pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
+    if (sourceBox.length > 0) {
+			outboxIDs.push(sourceBox[0].id);
+			boxReport += '\n OUTBOX #' + (i+1) + ': TYPE: source,     ID: ' + sourceBox[0].id;
+		}
+  }
+
+	if (mineralBoxArray.length) {
+		const mineralBoxID: Id<StructureContainer> = mineralBoxArray[0].id;
+		outboxIDs.push(mineralBoxID);
+		boxReport += '\n OUTBOX #' + outboxIDs.length + ': TYPE: mineral,   ID: ' + mineralBoxID;
+	}
+
+	if (outboxIDs.length) {
+		this.memory.settings.containerSettings.outboxes = outboxIDs;
+		boxesFound = true;
+	}
+
+	if (inboxArray.length) {
+    const inboxID			   :  Id<StructureContainer>[] = [inboxArray[0].id];
+
+		this.memory.settings.containerSettings.inboxes = inboxID;
+		boxReport += '\n INBOX  #1: TYPE: controller, ID: ' + inboxID[0];
+		boxesFound = true;
+	}
+
+	if (boxesFound) {
+		log(boxReport, this);
+		return true;
+	} else {
+		this.memory.settings.containerSettings.outboxes = [];
+		this.memory.settings.containerSettings.inboxes = [];
+		log('No containers located for registration, operation failed.');
+		return false;
+	}
+}
+
+Room.prototype.registerLogisticalPairs    = function(): boolean {
 
   //* Discover all resource locations, and any links in the room
   const sources:       Source[]                 = this.find(FIND_SOURCES);
   const minerals:      Mineral[]                = this.find(FIND_MINERALS);
-  const linkDrops:     StructureLink[]          = this.find(FIND_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && ((i.pos.x <= 4 || i.pos.x >= 45) || (i.pos.y <= 4 || i.pos.y >= 45)) });
-  const extractor:     StructureExtractor[]     = this.find(FIND_STRUCTURES, {filter: {structureType: STRUCTURE_EXTRACTOR }});
+  const linkDrops:     StructureLink[]          = this.find(FIND_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && (i.pos.x <= 2 || i.pos.x >= 47 || i.pos.y <= 2 || i.pos.y >= 47) });
+  const extractor:     StructureExtractor[]     = this.find(FIND_STRUCTURES, { filter: {structureType: STRUCTURE_EXTRACTOR }});
   let extractorBuilt:  boolean                  = false;
   let mineralOutbox:   Id<StructureContainer>;
   let energyInbox:     Id<StructureContainer>;
@@ -598,12 +666,12 @@ Room.prototype.registerLogisticalPairs    = function (): boolean {
 
   //* If there is a container by a mineral spot, put it's ID in the mineralOutbox
   if (minerals) {
-    const mineralOutboxArray: Array<StructureContainer> = minerals[0].pos.findInRange(FIND_STRUCTURES, 3, { filter: { structureType: STRUCTURE_CONTAINER } });
+    const mineralOutboxArray: Array<StructureContainer> = minerals[0].pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
     if (mineralOutboxArray.length > 0) mineralOutbox = mineralOutboxArray[0].id;
   }
 
   //* If there is a container by the controller, put it's ID in the energyInbox
-  const energyInboxArray: Array<StructureContainer> = this.controller.pos.findInRange(FIND_STRUCTURES, 5, { filter: { structureType: STRUCTURE_CONTAINER } });
+  const energyInboxArray: Array<StructureContainer> = this.controller.pos.findInRange(FIND_STRUCTURES, 4, { filter: { structureType: STRUCTURE_CONTAINER } });
   if (energyInboxArray.length > 0) energyInbox = energyInboxArray[0].id;
 
   //* Capture the room storage ID, if it exists
@@ -615,7 +683,7 @@ Room.prototype.registerLogisticalPairs    = function (): boolean {
   let roomInboxes: Array<Id<StructureContainer>> = this.memory.settings.containerSettings.inboxes || [];
   //* Find any containers by energy sources, put their IDs in the energyOutboxes
   for (let i = 0; i < sources.length; i++) {
-    let sourceBox: Array<StructureContainer> = sources[i].pos.findInRange(FIND_STRUCTURES, 3, { filter: { structureType: STRUCTURE_CONTAINER } });
+    let sourceBox: Array<StructureContainer> = sources[i].pos.findInRange(FIND_STRUCTURES, 2, { filter: { structureType: STRUCTURE_CONTAINER } });
     if (sourceBox.length > 0)  energyOutboxes.push(sourceBox[0].id);
   }
 
@@ -644,21 +712,58 @@ Room.prototype.registerLogisticalPairs    = function (): boolean {
     }
 
     if (this.memory.outposts) {
-      const remoteContainers: Array<Id<StructureContainer>> = this.memory.outposts.aggregateContainerList;
-      for (let i = 0; i < remoteContainers.length; i++) {
-        //* For rooms with remote links
-        if (linkDrops.length > 0) {
-          //* Build the remote source box to remote link pairs
-          for (let j = 0; j < linkDrops.length; j++) {
-            const remotePair: LogisticsPair = { source: remoteContainers[i], destination: linkDrops[j].id, resource: 'energy', locality: 'remote', descriptor: 'source to homelink' };
-            if (remotePair.source && remotePair.destination) logisticalPairs.push(remotePair);
-            else log('Malformed Pair: ' + remotePair, this);
-          }
-        //* For rooms without remote links, build the remote source box to storage pairs
-        } else {
-          const remotePair: LogisticsPair = { source: remoteContainers[i], destination: storage, resource: 'energy', locality: 'remote', descriptor: 'source to storage'};
-          if (remotePair.source && remotePair.destination) logisticalPairs.push(remotePair);
-          else log('Malformed Pair: ' + remotePair, this);
+
+      const remoteLinks = this.memory.data.linkRegistry.remotes;
+
+      if (remoteLinks.north) {
+        const northContainers = Game.rooms[roomExitsTo(this.name,1)].memory.objects.containers;
+
+        for (let i = 0; i < northContainers.length; i++) {
+          const remotePair: LogisticsPair = { source: northContainers[i], destination: remoteLinks.north, resource: 'energy', locality: 'remote', descriptor: 'north source to homelink' };
+          logisticalPairs.push(remotePair);
+        }
+      } else if (Game.rooms[roomExitsTo(this.name,1)].memory.objects.containers) {
+        for (let i = 0; i < Game.rooms[roomExitsTo(this.name,1)].memory.objects.containers.length; i++) {
+          const remotePair: LogisticsPair = { source: Game.rooms[roomExitsTo(this.name,1)].memory.objects.containers[i], destination: this.storage.id, resource: 'energy', locality: 'remote', descriptor: 'north source to storage'};
+          logisticalPairs.push(remotePair);
+        }
+      }
+      if (remoteLinks.east) {
+        const eastContainers = Game.rooms[roomExitsTo(this.name,3)].memory.objects.containers;
+
+        for (let i = 0; i < eastContainers.length; i++) {
+          const remotePair: LogisticsPair = { source: eastContainers[i], destination: remoteLinks.east, resource: 'energy', locality: 'remote', descriptor: 'east source to homelink' };
+          logisticalPairs.push(remotePair);
+        }
+      } else if (Game.rooms[roomExitsTo(this.name,3)].memory.objects.containers) {
+        for (let i = 0; i < Game.rooms[roomExitsTo(this.name,3)].memory.objects.containers.length; i++) {
+          const remotePair: LogisticsPair = { source: Game.rooms[roomExitsTo(this.name,3)].memory.objects.containers[i], destination: this.storage.id, resource: 'energy', locality: 'remote', descriptor: 'east source to storage'};
+          logisticalPairs.push(remotePair);
+        }
+      }
+      if (remoteLinks.south) {
+        const southContainers = Game.rooms[roomExitsTo(this.name,5)].memory.objects.containers;
+
+        for (let i = 0; i < southContainers.length; i++) {
+          const remotePair: LogisticsPair = { source: southContainers[i], destination: remoteLinks.south, resource: 'energy', locality: 'remote', descriptor: 'south source to homelink' };
+          logisticalPairs.push(remotePair);
+        }
+      } else if (Game.rooms[roomExitsTo(this.name,5)].memory.objects.containers) {
+        for (let i = 0; i < Game.rooms[roomExitsTo(this.name,5)].memory.objects.containers.length; i++) {
+          const remotePair: LogisticsPair = { source: Game.rooms[roomExitsTo(this.name,5)].memory.objects.containers[i], destination: this.storage.id, resource: 'energy', locality: 'remote', descriptor: 'south source to storage'};
+          logisticalPairs.push(remotePair);
+        }
+      }
+      if (remoteLinks.west) {
+        const westContainers = Game.rooms[roomExitsTo(this.name,7)].memory.objects.containers;
+
+        for (let i = 0; i < westContainers.length; i++) {
+          const remotePair: LogisticsPair = { source: westContainers[i], destination: remoteLinks.west, resource: 'energy', locality: 'remote', descriptor: 'west source to homelink' };
+        }
+      } else if (Game.rooms[roomExitsTo(this.name,7)].memory.objects.containers) {
+        for (let i = 0; i < Game.rooms[roomExitsTo(this.name,7)].memory.objects.containers.length; i++) {
+          const remotePair: LogisticsPair = { source: Game.rooms[roomExitsTo(this.name,7)].memory.objects.containers[i], destination: this.storage.id, resource: 'energy', locality: 'remote', descriptor: 'west source to storage'};
+          logisticalPairs.push(remotePair);
         }
       }
     }
@@ -668,6 +773,7 @@ Room.prototype.registerLogisticalPairs    = function (): boolean {
       const onePairStoU: LogisticsPair = { source: storage, destination: energyInbox, resource: 'energy', locality: 'local', descriptor: 'storage to upgrader' };
       if (onePairStoU.source && onePairStoU.destination) logisticalPairs.push(onePairStoU);
       else log('Malformed Pair: ' + onePairStoU, this);
+      this.memory.data.upgraderBucket = energyInbox;
     }
 
     //* Build the extractor box to storage pair
@@ -685,26 +791,24 @@ Room.prototype.registerLogisticalPairs    = function (): boolean {
     for (let i = 0; i < energyOutboxes.length; i++) {
       const onePair: LogisticsPair = { source: energyOutboxes[i], destination: energyInbox, resource: 'energy', locality: 'local', descriptor: 'source to upgrader'};
       if (onePair.source && onePair.destination) logisticalPairs.push(onePair);
-      else log('Malformed Pair: ' + onePair, this);
+      else log('Malformed Pre-Storage Pair: ' + onePair, this);
     }
   }
 
   //* Calculate the path lengths for each pair and append
   for (let i = 0; i < logisticalPairs.length; i++) {
+    const pair: LogisticsPair = logisticalPairs[i];
+		const startPos  = Game.getObjectById(pair.source);
+		const endPos 		= Game.getObjectById(pair.destination);
 
-    const pair = logisticalPairs[i];
-
-    const startPos = Game.getObjectById(pair.source);
-    const endPos = Game.getObjectById(pair.destination);
-
-    let pathObj = calcPath(startPos.pos, endPos.pos);
-    let pathLen: number = pathObj.length;
-    logisticalPairs[i].distance = pathLen;
+		let pathObj = calcPath(startPos.pos, endPos.pos);
+		let pathLen: number = pathObj.length;
+		logisticalPairs[i].distance = pathLen;
 
   }
 
   //* For path lengths over 60, cut the length in half and create two pairs (this will divide the job into two runners, lessening the energy burden for lower room levels)
-  let finalizedPairs: LogisticsPair[] = [];
+  /*let finalizedPairs: LogisticsPair[] = [];
   for (let i = 0; i < logisticalPairs.length; i++) {
     if (logisticalPairs[i].distance >= 60) {
       let clonedHalfPair: LogisticsPair = logisticalPairs[i];
@@ -715,7 +819,7 @@ Room.prototype.registerLogisticalPairs    = function (): boolean {
       const clonedPair: LogisticsPair = logisticalPairs[i];
       finalizedPairs.push(clonedPair);
     }
-  }
+  }*/
   //* Ensure data objects exist
 
   if (!this.memory.data) this.memory.data = {};
@@ -731,20 +835,21 @@ Room.prototype.registerLogisticalPairs    = function (): boolean {
 
   //* Prepare the pair report
   let pairReport: string[];
-  if (finalizedPairs.length > 1) {
+  if (logisticalPairs.length > 1) {
     pairReport = ['------------------------------------------------- REGISTERED LOGISTICAL PAIRS --------------------------------------------------'];
-    for (let i = 0; i < finalizedPairs.length; i++)
-      pairReport.push(' PAIR #' + (i+1) + ': OUTBOX> ' + finalizedPairs[i].source + ' | INBOX> ' + finalizedPairs[i].destination + ' | CARGO> ' + finalizedPairs[i].resource + ' | LOCALITY> ' + finalizedPairs[i].locality + ' | TYPE> ' + finalizedPairs[i].descriptor + '');
+    for (let i = 0; i < logisticalPairs.length; i++)
+      pairReport.push(' PAIR #' + (i+1) + ': OUTBOX> ' + logisticalPairs[i].source + ' | INBOX> ' + logisticalPairs[i].destination + ' | CARGO> ' + logisticalPairs[i].resource + ' | LOCALITY> ' + logisticalPairs[i].locality + ' | TYPE> ' + logisticalPairs[i].descriptor + '');
   } else pairReport = ['No pairs available to register properly.'];
 
   //* Push those pairs to memory and set the runner spawn target to match the number of pairs
-  this.memory.data.logisticalPairs = finalizedPairs;
+  this.memory.data.logisticalPairs = logisticalPairs;
 
   this.setTarget('runner', this.memory.data.logisticalPairs.length);
   log(pairReport, this);
-  if (finalizedPairs.length > 1) return true;
+  if (logisticalPairs.length > 1) return true;
   else return false;
 }
+
 
 Room.prototype.setRepairRampartsTo        = function(percentMax: number) {
 
@@ -1156,93 +1261,6 @@ Room.prototype.toggleSortConSites         = function() {
   }
 }
 
-Room.prototype.calcLabReaction            = function() {
-
-  const baseReg1 = this.memory.settings.labSettings.reagentOne;
-  const baseReg2 = this.memory.settings.labSettings.reagentTwo;
-  let outputChem: MineralCompoundConstant
-
-  // DETERMINE OUTPUT COMPOUND BASED ON INPUT COMPOUNDS
-  if (baseReg1 === RESOURCE_OXYGEN || baseReg2 === RESOURCE_OXYGEN) {
-    if (baseReg1 === RESOURCE_HYDROGEN || baseReg2 === RESOURCE_HYDROGEN)
-      outputChem = RESOURCE_HYDROXIDE;
-    else if (baseReg1 === RESOURCE_UTRIUM || baseReg2 === RESOURCE_UTRIUM)
-      outputChem = RESOURCE_UTRIUM_OXIDE;
-    else if (baseReg1 === RESOURCE_KEANIUM || baseReg2 === RESOURCE_KEANIUM)
-      outputChem = RESOURCE_KEANIUM_OXIDE;
-    else if (baseReg1 === RESOURCE_LEMERGIUM || baseReg2 === RESOURCE_LEMERGIUM)
-      outputChem = RESOURCE_LEMERGIUM_OXIDE;
-    else if (baseReg1 === RESOURCE_ZYNTHIUM || baseReg2 === RESOURCE_ZYNTHIUM)
-      outputChem = RESOURCE_ZYNTHIUM_OXIDE;
-    else if (baseReg1 === RESOURCE_GHODIUM || baseReg2 === RESOURCE_GHODIUM)
-      outputChem = RESOURCE_GHODIUM_OXIDE;
-  } else if (baseReg1 === RESOURCE_HYDROGEN || baseReg2 === RESOURCE_HYDROGEN) {
-    if (baseReg1 === RESOURCE_UTRIUM || baseReg2 === RESOURCE_UTRIUM)
-      outputChem = RESOURCE_UTRIUM_HYDRIDE;
-    else if (baseReg1 === RESOURCE_KEANIUM || baseReg2 === RESOURCE_KEANIUM)
-      outputChem = RESOURCE_KEANIUM_HYDRIDE;
-    else if (baseReg1 === RESOURCE_LEMERGIUM || baseReg2 === RESOURCE_LEMERGIUM)
-      outputChem = RESOURCE_LEMERGIUM_HYDRIDE;
-    else if (baseReg1 === RESOURCE_ZYNTHIUM || baseReg2 === RESOURCE_ZYNTHIUM)
-      outputChem = RESOURCE_ZYNTHIUM_HYDRIDE;
-    else if (baseReg1 === RESOURCE_GHODIUM || baseReg2 === RESOURCE_GHODIUM)
-      outputChem = RESOURCE_GHODIUM_HYDRIDE;
-  } else if (baseReg1 === RESOURCE_ZYNTHIUM || baseReg2 === RESOURCE_ZYNTHIUM) {
-    if (baseReg1 === RESOURCE_KEANIUM || baseReg2 === RESOURCE_KEANIUM)
-      outputChem = RESOURCE_ZYNTHIUM_KEANITE;
-  } else if (baseReg1 === RESOURCE_UTRIUM || baseReg2 === RESOURCE_UTRIUM) {
-    if (baseReg1 === RESOURCE_LEMERGIUM || baseReg2 === RESOURCE_LEMERGIUM)
-      outputChem = RESOURCE_UTRIUM_LEMERGITE;
-  } else if (baseReg1 === RESOURCE_ZYNTHIUM_KEANITE || baseReg2 === RESOURCE_ZYNTHIUM_KEANITE) {
-    if (baseReg1 === RESOURCE_UTRIUM_LEMERGITE || baseReg2 === RESOURCE_UTRIUM_LEMERGITE)
-      outputChem = RESOURCE_GHODIUM;
-  } else if (baseReg1 === RESOURCE_HYDROXIDE || baseReg2 === RESOURCE_HYDROXIDE) {
-    if (baseReg1 === RESOURCE_UTRIUM_HYDRIDE || baseReg2 === RESOURCE_UTRIUM_HYDRIDE)
-      outputChem = RESOURCE_UTRIUM_ACID;
-    if (baseReg1 === RESOURCE_UTRIUM_OXIDE || baseReg2 === RESOURCE_UTRIUM_OXIDE)
-      outputChem = RESOURCE_UTRIUM_ALKALIDE;
-    if (baseReg1 === RESOURCE_KEANIUM_HYDRIDE || baseReg2 === RESOURCE_KEANIUM_HYDRIDE)
-      outputChem = RESOURCE_KEANIUM_ACID;
-    if (baseReg1 === RESOURCE_KEANIUM_OXIDE || baseReg2 === RESOURCE_KEANIUM_OXIDE)
-      outputChem = RESOURCE_KEANIUM_ALKALIDE;
-    if (baseReg1 === RESOURCE_LEMERGIUM_HYDRIDE || baseReg2 === RESOURCE_LEMERGIUM_HYDRIDE)
-      outputChem = RESOURCE_LEMERGIUM_ACID;
-    if (baseReg1 === RESOURCE_LEMERGIUM_OXIDE || baseReg2 === RESOURCE_LEMERGIUM_OXIDE)
-      outputChem = RESOURCE_LEMERGIUM_ALKALIDE;
-    if (baseReg1 === RESOURCE_ZYNTHIUM_HYDRIDE || baseReg2 === RESOURCE_ZYNTHIUM_HYDRIDE)
-      outputChem = RESOURCE_ZYNTHIUM_ACID;
-    if (baseReg1 === RESOURCE_ZYNTHIUM_OXIDE || baseReg2 === RESOURCE_ZYNTHIUM_OXIDE)
-      outputChem = RESOURCE_ZYNTHIUM_ALKALIDE;
-    if (baseReg1 === RESOURCE_GHODIUM_HYDRIDE || baseReg2 === RESOURCE_GHODIUM_HYDRIDE)
-      outputChem = RESOURCE_GHODIUM_ACID;
-    if (baseReg1 === RESOURCE_GHODIUM_OXIDE || baseReg2 === RESOURCE_GHODIUM_OXIDE)
-      outputChem = RESOURCE_GHODIUM_ALKALIDE;
-  } else if (baseReg1 === RESOURCE_CATALYST || baseReg2 === RESOURCE_CATALYST) {
-    if (baseReg1 === RESOURCE_UTRIUM_ACID || baseReg2 == RESOURCE_UTRIUM_ACID)
-      outputChem = RESOURCE_CATALYZED_UTRIUM_ACID;
-    if (baseReg1 === RESOURCE_UTRIUM_ALKALIDE || baseReg2 == RESOURCE_UTRIUM_ALKALIDE)
-      outputChem = RESOURCE_CATALYZED_UTRIUM_ALKALIDE;
-    if (baseReg1 === RESOURCE_KEANIUM_ACID || baseReg2 == RESOURCE_KEANIUM_ACID)
-      outputChem = RESOURCE_CATALYZED_KEANIUM_ACID;
-    if (baseReg1 === RESOURCE_KEANIUM_ALKALIDE || baseReg2 == RESOURCE_KEANIUM_ALKALIDE)
-      outputChem = RESOURCE_CATALYZED_KEANIUM_ALKALIDE;
-    if (baseReg1 === RESOURCE_LEMERGIUM_ACID || baseReg2 == RESOURCE_LEMERGIUM_ACID)
-      outputChem = RESOURCE_CATALYZED_LEMERGIUM_ACID;
-    if (baseReg1 === RESOURCE_LEMERGIUM_ALKALIDE || baseReg2 == RESOURCE_LEMERGIUM_ALKALIDE)
-      outputChem = RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE;
-    if (baseReg1 === RESOURCE_ZYNTHIUM_ACID || baseReg2 == RESOURCE_ZYNTHIUM_ACID)
-      outputChem = RESOURCE_CATALYZED_ZYNTHIUM_ACID;
-    if (baseReg1 === RESOURCE_ZYNTHIUM_ALKALIDE || baseReg2 == RESOURCE_ZYNTHIUM_ALKALIDE)
-      outputChem = RESOURCE_CATALYZED_ZYNTHIUM_ALKALIDE;
-    if (baseReg1 === RESOURCE_GHODIUM_ACID || baseReg2 == RESOURCE_GHODIUM_ACID)
-      outputChem = RESOURCE_CATALYZED_GHODIUM_ACID;
-    if (baseReg1 === RESOURCE_GHODIUM_ALKALIDE || baseReg2 == RESOURCE_GHODIUM_ALKALIDE)
-      outputChem = RESOURCE_CATALYZED_GHODIUM_ALKALIDE;
-  }
-
-  return outputChem;
-}
-
 Room.prototype.setSquad                   = function(squadName: string) {
   if (this.memory.data.squads === undefined) this.memory.data.squads = [];
   const squads = this.memory.data.squads;
@@ -1423,6 +1441,9 @@ Room.prototype.registerOutpostContainers  = function(outpostName: RoomName) {
         else aggContainerList.push(outpostContainerArray[i]);
       }
 
+      Memory.colonies.registry[this.name].outposts[outpostName].containers = this.memory.objects.containers;
+      Game.rooms[this.name].memory.outposts.registry[outpostName].containers = this.memory.objects.containers;
+
       this.memory.outposts.aggregateContainerList = aggContainerList;
       const sourceListLen = this.memory.outposts.aggregateSourceList.length;
 
@@ -1436,6 +1457,9 @@ Room.prototype.registerOutpostContainers  = function(outpostName: RoomName) {
       const outpostContainerArray = this.memory.objects.containers;
       if (Game.rooms[homeRoomName].memory.outposts.aggregateContainerList === undefined) Game.rooms[homeRoomName].memory.outposts.aggregateContainerList = [];
       if (Game.rooms[homeRoomName].memory.outposts.aggLastContainer === undefined) Game.rooms[homeRoomName].memory.outposts.aggLastContainer = 0;
+
+      Memory.colonies.registry[this.memory.outpostOfRoom].outposts[this.name].containers = this.memory.objects.containers;
+      Game.rooms[this.memory.outpostOfRoom].memory.outposts.registry[this.name].containers = this.memory.objects.containers;
 
       let aggContainerList = Game.rooms[homeRoomName].memory.outposts.aggregateContainerList;
 
@@ -1463,7 +1487,7 @@ Room.prototype.calcOutpostPotential       = function() {
   }
 }
 
-Room.prototype.registerLinks              = function() {
+Room.prototype.registerLinks              = function(): void {
 
   if (this.memory.data === undefined) this.memory.data = {};
   if (this.memory.objects.links === undefined) this.cacheObjects();
@@ -1475,25 +1499,16 @@ Room.prototype.registerLinks              = function() {
 
     const numLinks = this.memory.objects.links.length;
 
-    let linkCentral: Array<StructureLink>;
-    let linkSource1: Array<StructureLink>;
-    let linkSource2: Array<StructureLink>;
-    let linkDestination: Array<StructureLink>;
-    let linkRemotes: Array<StructureLink>;
-
     const storage     = this.storage;
     const source1     = Game.getObjectById(this.memory.objects.sources[0]);
     const source2     = Game.getObjectById(this.memory.objects.sources[1]);
     const controller   = this.controller;
 
-    linkCentral = storage.pos.findInRange(FIND_MY_STRUCTURES, 3,{ filter: { structureType: STRUCTURE_LINK } });
-    linkSource1  = source1.pos.findInRange(FIND_MY_STRUCTURES, 3,{ filter: { structureType: STRUCTURE_LINK } });
-    linkSource2 = source2.pos.findInRange(FIND_MY_STRUCTURES, 3,{ filter: { structureType: STRUCTURE_LINK } });
-    linkDestination = controller.pos.findInRange(FIND_MY_STRUCTURES, 3, { filter: { structureType: STRUCTURE_LINK } });
-    linkRemotes = this.find(FIND_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && ((i.pos.x <= 4 || i.pos.x >= 45) && (i.pos.y <= 4 || i.pos.y >= 45)) });
-    log('linkRemotes: ' + linkRemotes, this);
-
-    const linkRemotes2: StructureLink[] = Game.flags.remLink1.pos.findInRange(FIND_STRUCTURES, 1, { filter: { structureType: STRUCTURE_LINK } });
+    const linkCentral: 		 StructureLink[] = storage.pos.findInRange(FIND_MY_STRUCTURES, 3,{ filter: { structureType: STRUCTURE_LINK } });
+    const linkSource1: 		 StructureLink[] = source1.pos.findInRange(FIND_MY_STRUCTURES, 3,{ filter: { structureType: STRUCTURE_LINK } });
+    const linkSource2: 		 StructureLink[] = source2.pos.findInRange(FIND_MY_STRUCTURES, 3,{ filter: { structureType: STRUCTURE_LINK } });
+    const linkDestination: StructureLink[] = controller.pos.findInRange(FIND_MY_STRUCTURES, 3, { filter: { structureType: STRUCTURE_LINK } });
+		const linkRemotes: 		 StructureLink[] = this.find(FIND_MY_STRUCTURES, { filter: (i) => i.structureType == STRUCTURE_LINK && (i.pos.x >= 47 || i.pos.x <= 2 || i.pos.y >= 47 || i.pos.y <= 2)});
 
     let linkReport = 'LINK REGISTRATION REPORT:-------------------###';
 
@@ -1513,23 +1528,41 @@ Room.prototype.registerLinks              = function() {
       this.memory.data.linkRegistry.destination = linkDestination[0].id;
       linkReport += '\n CONTROLLER LINK: REGISTERED';
     }
-    if (linkRemotes2.length > 0) {
-      let remoteIDs: Array<Id<StructureLink>> = [];
-      for (let i = 0; i < linkRemotes2.length; i++) {
-        remoteIDs.push(linkRemotes2[ i ].id);
-        linkReport += '\n REMOTE LOGISTICS LINK #' + i + ' OF ' + linkRemotes2.length + ': REGISTERED';
-      }
-      this.memory.data.linkRegistry.remotes = remoteIDs;
-    }
+    if (linkRemotes.length > 0) {
+      let remoteIDs: Id<StructureLink>[] = [];
+      let remoteLinkObject: {[key: string]: any} = {};
 
-    //this.registerLogisticalPairs();
+      for (let i = 0; i < linkRemotes.length; i++) {
+        remoteIDs.push(linkRemotes[ i ].id);
+        linkReport += '\n REMOTE LOGISTICS LINK #' + (i+1) + ' OF ' + remoteIDs.length + ': REGISTERED';
+
+        if (linkRemotes[i].pos.x >= 47) {
+          Game.rooms[roomExitsTo(this.name, RIGHT)].memory.roomLinkID = linkRemotes[i].id;
+          remoteLinkObject.east = linkRemotes[i].id;
+        }
+        else if (linkRemotes[i].pos.x <= 2) {
+          Game.rooms[roomExitsTo(this.name, LEFT)].memory.roomLinkID = linkRemotes[i].id;
+          remoteLinkObject.west = linkRemotes[i].id;
+        }
+        else if (linkRemotes[i].pos.y >= 47) {
+          Game.rooms[roomExitsTo(this.name, BOTTOM)].memory.roomLinkID = linkRemotes[i].id;
+          remoteLinkObject.south = linkRemotes[i].id;
+        }
+        else if (linkRemotes[i].pos.y <= 2) {
+          Game.rooms[roomExitsTo(this.name, TOP)].memory.roomLinkID = linkRemotes[i].id;
+          remoteLinkObject.north = linkRemotes[i].id;
+        }
+      }
+      this.memory.data.linkRegistry.remotes = remoteLinkObject;
+
+    this.registerLogisticalPairs();
 
     log(linkReport, this);
 
-    return linkReport;
+    return;
 
+    }
   }
-
 }
 
 Room.prototype.registerInvaderGroup       = function(rallyPoint: string | string[], targetRoom: RoomName, groupSize: number = 2, groupRoles: string[] = ['melee', 'healer']) {
@@ -1654,3 +1687,44 @@ Room.prototype.setClaimObjective          = function(claimRoom: RoomName, logSpo
     return false;
   }
 }
+/*
+Room.prototype.setLab = function(labID: Id<StructureLab>, labNum: number): boolean {
+	if (this.memory.settings.labSettings === undefined)
+		this.memory.settings.labSettings = {1: {'id':, 'mineral': ''}, 2: {'id': '', 'mineral': ''}, 3: {'id': '', 'mineral': ''}, 4: {'id': '', 'mineral': ''}, 5: {'id': '', 'mineral': ''}, 6: {'id': '', 'mineral': ''}, 7: {'id': '', 'mineral': ''}, 8: {'id': '', 'mineral': ''}, 9: {'id': '', 'mineral': ''}, 10: {'id': '', 'mineral': ''}};
+
+	this.memory.settings.labSettings.
+}*/
+
+/*Room.prototype.createLabOrder = function(mineralType: MineralConstant | MineralCommodityConstant, desiredGoal: number): boolean {
+
+	const
+}*/
+
+/*Room.prototype.createWorkOrder = function(pickup: Id<AnyStoreStructure | Tombstone>,	dropoff: Id<AnyStoreStructure>,	cargo: ResourceConstant | MineralConstant | MineralCompoundConstant | CommodityConstant, totalAmount?: number, priority = 3): boolean {
+
+  const pickupObject = Game.getObjectById(pickup);
+  const pickupRoom: RoomName = this.name;
+  const dropoffObject = Game.getObjectById(dropoff);
+  const dropoffRoom: RoomName = dropoffObject.room.name;
+
+
+  if (totalAmount === undefined)
+    totalAmount == pickupObject.store[cargo];
+
+  const workOrder: WorkOrder = {
+    pickup: pickup,
+		pickupRoom?: pickupRoom,
+		dropoff: dropoff,
+		dropoffRoom?: dropoffRoom,
+		cargo: cargo,
+		totalAmount: totalAmount,
+		amountPickedUp: 0,
+		amountDelivered: 0,
+    priority: priority
+  }
+
+  // TODO implement functionality
+  log(`No functionality implemented yet.`, this);
+  return;
+}
+*/
